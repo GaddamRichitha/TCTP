@@ -1,0 +1,2002 @@
+     1→<!DOCTYPE html>
+     2→<html lang="en">
+     3→<head>
+     4→<meta charset="UTF-8">
+     5→<meta name="viewport" content="width=device-width, initial-scale=1.0">
+     6→<title>TCTP — Software Financial Simulator</title>
+     7→<style>
+     8→/* ── DESIGN TOKENS ─────────────────────────────────────────────── */
+     9→:root {
+    10→  --ink:       #0f1923;
+    11→  --ink2:      #3d4f5c;
+    12→  --ink3:      #7a8fa0;
+    13→  --ink4:      #b0c0cc;
+    14→  --bg:        #f0f4f8;
+    15→  --surface:   #ffffff;
+    16→  --surface2:  #f7fafc;
+    17→  --border:    #dde4eb;
+    18→  --border2:   #c5d0da;
+    19→
+    20→  --blue:      #1a6cf0;
+    21→  --blue-dk:   #1254c0;
+    22→  --blue-lt:   #e8f0fd;
+    23→  --blue-mid:  #3d7ef5;
+    24→
+    25→  --teal:      #0ea8a8;
+    26→  --teal-lt:   #e0f7f7;
+    27→  --green:     #16a34a;
+    28→  --green-lt:  #dcfce7;
+    29→  --amber:     #d97706;
+    30→  --amber-lt:  #fef3c7;
+    31→  --red:       #dc2626;
+    32→  --red-lt:    #fee2e2;
+    33→  --purple:    #7c3aed;
+    34→  --purple-lt: #ede9fe;
+    35→
+    36→  --r4:  4px;
+    37→  --r8:  8px;
+    38→  --r12: 12px;
+    39→
+    40→  /* Category palette */
+    41→  --cat-labour:   #1a6cf0;
+    42→  --cat-infra:    #0ea8a8;
+    43→  --cat-apis:     #7c3aed;
+    44→  --cat-llm:      #d97706;
+    45→  --cat-overhead: #6b7280;
+    46→}
+    47→
+    48→*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    49→
+    50→body {
+    51→  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    52→  background: var(--bg);
+    53→  color: var(--ink);
+    54→  font-size: 14px;
+    55→  line-height: 1.5;
+    56→  min-height: 100vh;
+    57→}
+    58→
+    59→/* ── APP SHELL ──────────────────────────────────────────────────── */
+    60→.app-bar {
+    61→  background: var(--ink);
+    62→  color: #fff;
+    63→  display: flex;
+    64→  align-items: center;
+    65→  justify-content: space-between;
+    66→  padding: 0 24px;
+    67→  height: 52px;
+    68→  position: sticky;
+    69→  top: 0;
+    70→  z-index: 100;
+    71→}
+    72→.app-bar-brand { display: flex; align-items: center; gap: 10px; }
+    73→.app-bar-logo {
+    74→  font-size: 18px;
+    75→  font-weight: 800;
+    76→  letter-spacing: -0.5px;
+    77→  color: #fff;
+    78→}
+    79→.app-bar-logo span { color: var(--blue-mid); }
+    80→.app-bar-sub { font-size: 12px; color: #8fa0b0; }
+    81→.app-bar-right { display: flex; align-items: center; gap: 8px; }
+    82→.app-bar-badge {
+    83→  background: var(--blue);
+    84→  color: #fff;
+    85→  font-size: 11px;
+    86→  font-weight: 700;
+    87→  padding: 2px 8px;
+    88→  border-radius: 20px;
+    89→  letter-spacing: 0.04em;
+    90→}
+    91→.live-dot {
+    92→  width: 8px; height: 8px;
+    93→  border-radius: 50%;
+    94→  background: var(--green);
+    95→  animation: pulse 2s infinite;
+    96→  display: inline-block;
+    97→}
+    98→@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    99→.live-label { font-size: 11px; color: #8fa0b0; display: flex; align-items: center; gap: 5px; }
+   100→
+   101→/* ── LAYOUT ─────────────────────────────────────────────────────── */
+   102→.layout {
+   103→  display: grid;
+   104→  grid-template-columns: 280px 1fr;
+   105→  min-height: calc(100vh - 52px);
+   106→}
+   107→
+   108→/* ── SIDEBAR NAV ─────────────────────────────────────────────────── */
+   109→.sidebar {
+   110→  background: var(--surface);
+   111→  border-right: 1px solid var(--border);
+   112→  padding: 20px 0;
+   113→  position: sticky;
+   114→  top: 52px;
+   115→  height: calc(100vh - 52px);
+   116→  overflow-y: auto;
+   117→}
+   118→.sidebar-section { margin-bottom: 4px; }
+   119→.sidebar-label {
+   120→  font-size: 10px;
+   121→  font-weight: 700;
+   122→  text-transform: uppercase;
+   123→  letter-spacing: 0.08em;
+   124→  color: var(--ink3);
+   125→  padding: 8px 20px 4px;
+   126→}
+   127→.nav-item {
+   128→  display: flex;
+   129→  align-items: center;
+   130→  gap: 10px;
+   131→  padding: 9px 20px;
+   132→  cursor: pointer;
+   133→  border-left: 3px solid transparent;
+   134→  transition: all 0.15s;
+   135→  font-size: 13px;
+   136→  color: var(--ink2);
+   137→}
+   138→.nav-item:hover { background: var(--bg); color: var(--ink); }
+   139→.nav-item.active {
+   140→  background: var(--blue-lt);
+   141→  border-left-color: var(--blue);
+   142→  color: var(--blue-dk);
+   143→  font-weight: 600;
+   144→}
+   145→.nav-item .nav-icon {
+   146→  width: 28px; height: 28px;
+   147→  border-radius: var(--r8);
+   148→  display: flex; align-items: center; justify-content: center;
+   149→  font-size: 13px;
+   150→  background: var(--bg);
+   151→  flex-shrink: 0;
+   152→}
+   153→.nav-item.active .nav-icon { background: var(--blue); color: #fff; }
+   154→.nav-badge {
+   155→  margin-left: auto;
+   156→  font-size: 10px;
+   157→  font-weight: 700;
+   158→  padding: 1px 6px;
+   159→  border-radius: 20px;
+   160→  background: var(--bg);
+   161→  color: var(--ink3);
+   162→}
+   163→.nav-item.active .nav-badge { background: var(--blue-dk); color: #fff; }
+   164→
+   165→/* Category nav sub-items */
+   166→.cat-nav-item {
+   167→  display: flex;
+   168→  align-items: center;
+   169→  gap: 8px;
+   170→  padding: 7px 20px 7px 36px;
+   171→  cursor: pointer;
+   172→  font-size: 12px;
+   173→  color: var(--ink2);
+   174→  transition: all 0.15s;
+   175→}
+   176→.cat-nav-item:hover { background: var(--bg); }
+   177→.cat-nav-item.active { color: var(--blue-dk); font-weight: 600; }
+   178→.cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+   179→
+   180→/* Sidebar totals */
+   181→.sidebar-totals {
+   182→  margin: 16px 12px 0;
+   183→  background: var(--bg);
+   184→  border-radius: var(--r8);
+   185→  padding: 12px;
+   186→}
+   187→.st-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 12px; }
+   188→.st-row:last-child { margin-bottom: 0; border-top: 1px solid var(--border); padding-top: 6px; margin-top: 6px; font-weight: 700; }
+   189→.st-label { color: var(--ink2); }
+   190→.st-value { font-weight: 600; color: var(--ink); font-feature-settings: 'tnum'; }
+   191→
+   192→/* ── MAIN CONTENT ────────────────────────────────────────────────── */
+   193→.main { overflow-y: auto; }
+   194→.page { display: none; }
+   195→.page.active { display: block; }
+   196→
+   197→/* ── PAGE HEADER ─────────────────────────────────────────────────── */
+   198→.page-header {
+   199→  background: var(--surface);
+   200→  border-bottom: 1px solid var(--border);
+   201→  padding: 20px 28px;
+   202→  display: flex;
+   203→  justify-content: space-between;
+   204→  align-items: flex-start;
+   205→}
+   206→.ph-title { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+   207→.ph-sub { font-size: 13px; color: var(--ink3); margin-top: 2px; }
+   208→.ph-actions { display: flex; gap: 8px; }
+   209→
+   210→/* ── BUTTONS ─────────────────────────────────────────────────────── */
+   211→.btn {
+   212→  display: inline-flex; align-items: center; gap: 6px;
+   213→  padding: 7px 14px;
+   214→  border-radius: var(--r8);
+   215→  font-size: 13px; font-weight: 600;
+   216→  cursor: pointer; border: none;
+   217→  transition: all 0.15s;
+   218→}
+   219→.btn-primary { background: var(--blue); color: #fff; }
+   220→.btn-primary:hover { background: var(--blue-dk); }
+   221→
+   222→/* Export menu */
+   223→.export-menu {
+   224→  display: none;
+   225→  position: absolute; top: calc(100% + 6px); right: 0;
+   226→  background: var(--surface); border: 1px solid var(--border);
+   227→  border-radius: var(--r12); box-shadow: 0 8px 24px rgba(15,25,35,0.14);
+   228→  width: 260px; padding: 6px; z-index: 200;
+   229→}
+   230→.export-menu.open { display: block; }
+   231→.export-menu-item {
+   232→  display: flex; align-items: center; gap: 10px;
+   233→  padding: 9px 10px; border-radius: var(--r8); cursor: pointer;
+   234→  transition: background 0.12s;
+   235→}
+   236→.export-menu-item:hover { background: var(--bg); }
+   237→.export-icon {
+   238→  width: 34px; height: 28px; border-radius: 6px;
+   239→  display: flex; align-items: center; justify-content: center;
+   240→  font-size: 10px; font-weight: 800; letter-spacing: 0.02em; flex-shrink: 0;
+   241→}
+   242→.export-item-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+   243→.export-item-sub { font-size: 11px; color: var(--ink3); margin-top: 1px; }
+   244→.export-status {
+   245→  margin: 0 28px; padding: 10px 16px; border-radius: var(--r8);
+   246→  background: var(--blue-lt); color: var(--blue-dk); font-size: 13px;
+   247→  font-weight: 500; display: flex; align-items: center; gap: 8px;
+   248→}
+   249→.export-status.success { background: var(--green-lt); color: var(--green); }
+   250→.export-status.error { background: var(--red-lt); color: var(--red); }
+   251→.export-spinner {
+   252→  width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent;
+   253→  border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0;
+   254→}
+   255→@keyframes spin { to { transform: rotate(360deg); } }
+   256→.btn-secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--border2); }
+   257→.btn-secondary:hover { background: var(--bg); }
+   258→.btn-ghost { background: transparent; color: var(--ink2); border: 1px solid transparent; }
+   259→.btn-ghost:hover { background: var(--bg); color: var(--ink); }
+   260→.btn-danger { background: var(--red-lt); color: var(--red); border: 1px solid #fca5a5; }
+   261→.btn-danger:hover { background: #fecaca; }
+   262→.btn-sm { padding: 4px 10px; font-size: 12px; }
+   263→.btn-xs { padding: 3px 8px; font-size: 11px; border-radius: 5px; }
+   264→
+   265→/* ── FORMS ───────────────────────────────────────────────────────── */
+   266→.form-grid { display: grid; gap: 16px; }
+   267→.g2 { grid-template-columns: 1fr 1fr; }
+   268→.g3 { grid-template-columns: 1fr 1fr 1fr; }
+   269→.g4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+   270→.field { display: flex; flex-direction: column; gap: 5px; }
+   271→.field-label { font-size: 12px; font-weight: 600; color: var(--ink2); }
+   272→.field-hint { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+   273→.field input, .field select, .field textarea {
+   274→  border: 1px solid var(--border2);
+   275→  border-radius: var(--r8);
+   276→  padding: 8px 10px;
+   277→  font-size: 13px;
+   278→  background: var(--surface);
+   279→  color: var(--ink);
+   280→  outline: none;
+   281→  width: 100%;
+   282→  font-family: inherit;
+   283→  transition: border-color 0.15s;
+   284→}
+   285→.field input:focus, .field select:focus, .field textarea:focus {
+   286→  border-color: var(--blue);
+   287→  box-shadow: 0 0 0 3px rgba(26,108,240,.1);
+   288→}
+   289→.field input[type=range] {
+   290→  padding: 0;
+   291→  border: none;
+   292→  background: transparent;
+   293→  box-shadow: none;
+   294→  accent-color: var(--blue);
+   295→  cursor: pointer;
+   296→}
+   297→.range-row { display: flex; align-items: center; gap: 8px; }
+   298→.range-val { font-size: 14px; font-weight: 700; min-width: 48px; text-align: right; color: var(--blue); }
+   299→
+   300→/* ── CARDS ───────────────────────────────────────────────────────── */
+   301→.card {
+   302→  background: var(--surface);
+   303→  border: 1px solid var(--border);
+   304→  border-radius: var(--r12);
+   305→  padding: 20px;
+   306→  margin-bottom: 16px;
+   307→}
+   308→.card-header {
+   309→  display: flex; align-items: center; justify-content: space-between;
+   310→  margin-bottom: 16px;
+   311→}
+   312→.card-title { font-size: 14px; font-weight: 700; }
+   313→.card-sub { font-size: 12px; color: var(--ink3); margin-top: 2px; }
+   314→
+   315→/* ── METRIC CARDS ────────────────────────────────────────────────── */
+   316→.metric-grid { display: grid; gap: 12px; }
+   317→.mg-3 { grid-template-columns: repeat(3,1fr); }
+   318→.mg-4 { grid-template-columns: repeat(4,1fr); }
+   319→.mg-6 { grid-template-columns: repeat(6,1fr); }
+   320→.metric-card {
+   321→  background: var(--surface);
+   322→  border: 1px solid var(--border);
+   323→  border-radius: var(--r12);
+   324→  padding: 16px;
+   325→}
+   326→.mc-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink3); margin-bottom: 6px; }
+   327→.mc-value { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; font-feature-settings: 'tnum'; }
+   328→.mc-sub { font-size: 11px; color: var(--ink3); margin-top: 4px; }
+   329→.mc-trend { font-size: 11px; font-weight: 700; margin-top: 3px; }
+   330→.metric-card.blue  { border-color: #93c5fd; background: var(--blue-lt); } .metric-card.blue .mc-value { color: var(--blue-dk); }
+   331→.metric-card.green { border-color: #86efac; background: var(--green-lt); } .metric-card.green .mc-value { color: var(--green); }
+   332→.metric-card.amber { border-color: #fcd34d; background: var(--amber-lt); } .metric-card.amber .mc-value { color: var(--amber); }
+   333→.metric-card.red   { border-color: #fca5a5; background: var(--red-lt); }   .metric-card.red .mc-value   { color: var(--red); }
+   334→.metric-card.purple{ border-color: #c4b5fd; background: var(--purple-lt); } .metric-card.purple .mc-value{ color: var(--purple); }
+   335→.metric-card.teal  { border-color: #99f6e4; background: var(--teal-lt); }   .metric-card.teal .mc-value  { color: var(--teal); }
+   336→
+   337→/* ── COST ITEM ROWS ──────────────────────────────────────────────── */
+   338→.cost-section { margin-bottom: 24px; }
+   339→.cost-section-header {
+   340→  display: flex; align-items: center; justify-content: space-between;
+   341→  padding: 10px 0; border-bottom: 2px solid var(--border);
+   342→  margin-bottom: 0;
+   343→}
+   344→.csh-left { display: flex; align-items: center; gap: 10px; }
+   345→.csh-icon {
+   346→  width: 32px; height: 32px; border-radius: var(--r8);
+   347→  display: flex; align-items: center; justify-content: center;
+   348→  font-size: 16px; flex-shrink: 0;
+   349→}
+   350→.csh-title { font-size: 14px; font-weight: 700; }
+   351→.csh-count { font-size: 11px; color: var(--ink3); }
+   352→.csh-total { font-size: 14px; font-weight: 800; font-feature-settings: 'tnum'; }
+   353→
+   354→.cost-table { width: 100%; border-collapse: collapse; }
+   355→.cost-table th {
+   356→  text-align: left;
+   357→  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+   358→  color: var(--ink3);
+   359→  padding: 8px 8px 6px;
+   360→  border-bottom: 1px solid var(--border);
+   361→}
+   362→.cost-table th.r { text-align: right; }
+   363→.cost-table tbody tr { border-bottom: 1px solid var(--border); }
+   364→.cost-table tbody tr:last-child { border-bottom: none; }
+   365→.cost-table tbody tr:hover { background: var(--bg); }
+   366→.cost-table td { padding: 7px 8px; vertical-align: middle; }
+   367→.cost-table td input, .cost-table td select {
+   368→  border: 1px solid transparent;
+   369→  border-radius: 5px;
+   370→  padding: 5px 7px;
+   371→  font-size: 13px;
+   372→  background: transparent;
+   373→  color: var(--ink);
+   374→  width: 100%;
+   375→  outline: none;
+   376→  font-family: inherit;
+   377→}
+   378→.cost-table td input:hover, .cost-table td select:hover { border-color: var(--border2); background: var(--surface); }
+   379→.cost-table td input:focus, .cost-table td select:focus {
+   380→  border-color: var(--blue);
+   381→  background: var(--surface);
+   382→  box-shadow: 0 0 0 2px rgba(26,108,240,.1);
+   383→}
+   384→.cost-table td.r { text-align: right; }
+   385→.row-total { font-weight: 700; font-feature-settings: 'tnum'; font-size: 13px; }
+   386→.type-badge {
+   387→  display: inline-flex; align-items: center;
+   388→  padding: 2px 7px; border-radius: 20px;
+   389→  font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+   390→}
+   391→.type-monthly  { background: var(--blue-lt); color: var(--blue-dk); }
+   392→.type-onetime  { background: var(--amber-lt); color: #92400e; }
+   393→.type-perunit  { background: var(--purple-lt); color: #4c1d95; }
+   394→
+   395→.add-row-btn {
+   396→  display: flex; align-items: center; gap: 6px;
+   397→  width: 100%; padding: 8px 12px;
+   398→  border: 1px dashed var(--border2);
+   399→  border-radius: var(--r8); background: none;
+   400→  color: var(--ink3); font-size: 12px; cursor: pointer;
+   401→  transition: all 0.15s; margin-top: 6px;
+   402→}
+   403→.add-row-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-lt); }
+   404→
+   405→/* ── CHART BARS ──────────────────────────────────────────────────── */
+   406→.bar-chart { display: flex; flex-direction: column; gap: 10px; }
+   407→.bar-row { display: flex; align-items: center; gap: 10px; }
+   408→.bar-label { font-size: 12px; color: var(--ink2); width: 100px; text-align: right; flex-shrink: 0; }
+   409→.bar-track { flex: 1; background: var(--bg); border-radius: 3px; height: 20px; overflow: hidden; }
+   410→.bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+   411→.bar-val { font-size: 12px; font-weight: 700; font-feature-settings: 'tnum'; width: 90px; flex-shrink: 0; }
+   412→
+   413→/* ── SENSITIVITY TABLE ───────────────────────────────────────────── */
+   414→.sens-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+   415→.sens-table th {
+   416→  background: var(--bg); padding: 8px 12px;
+   417→  font-size: 11px; font-weight: 700; text-transform: uppercase;
+   418→  letter-spacing: 0.06em; color: var(--ink3);
+   419→  border-bottom: 1px solid var(--border); text-align: left;
+   420→}
+   421→.sens-table th.r { text-align: right; }
+   422→.sens-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+   423→.sens-table td.r { text-align: right; font-feature-settings: 'tnum'; font-weight: 600; }
+   424→.sens-table tr:last-child td { border-bottom: none; }
+   425→.sens-table tr:hover td { background: var(--bg); }
+   426→.verdict-pill {
+   427→  display: inline-flex; align-items: center;
+   428→  padding: 3px 10px; border-radius: 20px;
+   429→  font-size: 11px; font-weight: 700;
+   430→}
+   431→.vp-go     { background: var(--green-lt); color: var(--green); }
+   432→.vp-caution{ background: var(--amber-lt); color: var(--amber); }
+   433→.vp-nogo   { background: var(--red-lt); color: var(--red); }
+   434→
+   435→/* ── VERDICT BOX ─────────────────────────────────────────────────── */
+   436→.verdict-box {
+   437→  border-radius: var(--r12); padding: 24px;
+   438→  border: 2px solid; margin-bottom: 20px;
+   439→}
+   440→.verdict-box.go     { background: var(--green-lt); border-color: #86efac; }
+   441→.verdict-box.caution{ background: var(--amber-lt); border-color: #fcd34d; }
+   442→.verdict-box.nogo   { background: var(--red-lt);   border-color: #fca5a5; }
+   443→.vb-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+   444→.vb-icon { font-size: 28px; }
+   445→.vb-title { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
+   446→.vb-desc { font-size: 13px; color: var(--ink2); line-height: 1.6; }
+   447→
+   448→/* ── CHECKLIST ───────────────────────────────────────────────────── */
+   449→.checklist { display: flex; flex-direction: column; gap: 8px; }
+   450→.check-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; }
+   451→.check-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+   452→.check-text { font-size: 13px; flex: 1; }
+   453→.check-text strong { display: block; }
+   454→.check-text span { font-size: 12px; color: var(--ink3); }
+   455→
+   456→/* ── PROGRESS METER ──────────────────────────────────────────────── */
+   457→.progress-meter { margin: 12px 0; }
+   458→.pm-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink3); margin-bottom: 5px; }
+   459→.pm-track { height: 10px; background: var(--bg); border-radius: 5px; overflow: hidden; border: 1px solid var(--border); }
+   460→.pm-fill { height: 100%; border-radius: 5px; transition: width 0.5s ease; }
+   461→
+   462→/* ── WATERFALL CHART ─────────────────────────────────────────────── */
+   463→.waterfall { display: flex; flex-direction: column; gap: 8px; }
+   464→.wf-row { display: flex; align-items: center; gap: 10px; }
+   465→.wf-label { font-size: 12px; color: var(--ink2); width: 140px; text-align: right; flex-shrink: 0; }
+   466→.wf-track { flex: 1; height: 22px; position: relative; background: var(--bg); border-radius: 3px; overflow: hidden; }
+   467→.wf-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+   468→.wf-val { font-size: 12px; font-weight: 700; width: 90px; flex-shrink: 0; font-feature-settings: 'tnum'; }
+   469→
+   470→/* ── CASHFLOW TABLE ──────────────────────────────────────────────── */
+   471→.cf-chart { display: flex; flex-direction: column; gap: 5px; }
+   472→.cf-row { display: flex; align-items: center; gap: 8px; }
+   473→.cf-mo { font-size: 11px; color: var(--ink3); width: 52px; text-align: right; flex-shrink: 0; }
+   474→.cf-track { flex: 1; height: 14px; background: var(--bg); border-radius: 2px; overflow: hidden; }
+   475→.cf-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+   476→.cf-val { font-size: 11px; font-weight: 600; width: 80px; flex-shrink: 0; font-feature-settings: 'tnum'; }
+   477→
+   478→/* ── TABS ────────────────────────────────────────────────────────── */
+   479→.tab-bar { display: flex; gap: 2px; padding: 4px; background: var(--bg); border-radius: var(--r8); margin-bottom: 16px; width: fit-content; }
+   480→.tab-btn { padding: 6px 14px; border: none; background: none; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 6px; color: var(--ink3); transition: all 0.15s; }
+   481→.tab-btn.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+   482→.tab-panel { display: none; }
+   483→.tab-panel.active { display: block; }
+   484→
+   485→/* ── ASSUMPTION BADGE ────────────────────────────────────────────── */
+   486→.assumption-tag {
+   487→  display: inline-flex; align-items: center; gap: 4px;
+   488→  background: var(--blue-lt); color: var(--blue-dk);
+   489→  border: 1px solid #bfdbfe; border-radius: 4px;
+   490→  font-size: 11px; font-weight: 600; padding: 2px 7px;
+   491→  margin: 2px;
+   492→}
+   493→
+   494→/* ── INFO BOX ────────────────────────────────────────────────────── */
+   495→.info-box {
+   496→  background: var(--blue-lt); border: 1px solid #bfdbfe;
+   497→  border-radius: var(--r8); padding: 12px 14px;
+   498→  font-size: 12px; color: var(--blue-dk);
+   499→  margin-bottom: 14px;
+   500→}
+   501→.warn-box {
+   502→  background: var(--amber-lt); border: 1px solid #fcd34d;
+   503→  border-radius: var(--r8); padding: 12px 14px;
+   504→  font-size: 12px; color: #92400e;
+   505→  margin-bottom: 14px;
+   506→}
+   507→
+   508→/* ── CONTENT PADDING ─────────────────────────────────────────────── */
+   509→.content { padding: 24px 28px; }
+   510→.section-gap { margin-bottom: 28px; }
+   511→
+   512→/* ── REPORT PAGE ─────────────────────────────────────────────────── */
+   513→.report-section { margin-bottom: 24px; }
+   514→.rs-title { font-size: 13px; font-weight: 700; color: var(--ink2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--border); }
+   515→.summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+   516→.summary-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+   517→.summary-table td:first-child { color: var(--ink2); }
+   518→.summary-table td:last-child { text-align: right; font-weight: 700; font-feature-settings: 'tnum'; }
+   519→.summary-table tr:last-child td { border-bottom: none; }
+   520→.summary-table .total-row td { background: var(--bg); font-weight: 800; font-size: 14px; }
+   521→
+   522→/* ── DIVIDER ─────────────────────────────────────────────────────── */
+   523→.divider { height: 1px; background: var(--border); margin: 20px 0; }
+   524→
+   525→/* ── RESPONSIVE ──────────────────────────────────────────────────── */
+   526→@media (max-width: 768px) {
+   527→  .layout { grid-template-columns: 1fr; }
+   528→  .sidebar { display: none; }
+   529→  .g2, .g3, .g4 { grid-template-columns: 1fr; }
+   530→  .mg-3, .mg-4, .mg-6 { grid-template-columns: 1fr 1fr; }
+   531→}
+   532→
+   533→/* ── PRINT ───────────────────────────────────────────────────────── */
+   534→@media print {
+   535→  .app-bar, .sidebar { display: none; }
+   536→  .layout { display: block; }
+   537→  .main { overflow: visible; }
+   538→  .page { display: block !important; }
+   539→  .page-header { break-after: avoid; }
+   540→}
+   541→
+   542→/* LLM estimator mini-table */
+   543→.llm-calc { background: var(--bg); border-radius: var(--r8); padding: 12px; margin-top: 8px; font-size: 12px; }
+   544→.llm-calc-row { display: flex; justify-content: space-between; padding: 3px 0; }
+   545→.llm-calc-row strong { font-feature-settings:'tnum'; }
+   546→
+   547→/* Tooltip */
+   548→[data-tip] { position: relative; cursor: help; }
+   549→[data-tip]::after {
+   550→  content: attr(data-tip);
+   551→  position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
+   552→  background: var(--ink); color: #fff;
+   553→  font-size: 11px; padding: 4px 8px; border-radius: 4px;
+   554→  white-space: nowrap; pointer-events: none; opacity: 0;
+   555→  transition: opacity 0.15s;
+   556→}
+   557→[data-tip]:hover::after { opacity: 1; }
+   558→</style>
+   559→<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+   560→<script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js"></script>
+   561→</head>
+   562→<body>
+   563→
+   564→<!-- ── APP BAR ─────────────────────────────────────────────────── -->
+   565→<div class="app-bar">
+   566→  <div class="app-bar-brand">
+   567→    <div class="app-bar-logo">TC<span>TP</span></div>
+   568→    <div class="app-bar-sub">Software Financial Simulator</div>
+   569→  </div>
+   570→  <div class="app-bar-right">
+   571→    <div class="live-label"><span class="live-dot"></span> Live calculations</div>
+   572→    <div class="app-bar-badge">v1.0</div>
+   573→  </div>
+   574→</div>
+   575→
+   576→<div class="layout">
+   577→
+   578→<!-- ── SIDEBAR ────────────────────────────────────────────────── -->
+   579→<div class="sidebar">
+   580→  <div class="sidebar-section">
+   581→    <div class="sidebar-label">Navigation</div>
+   582→    <div class="nav-item active" onclick="showPage('project')" id="nav-project">
+   583→      <div class="nav-icon">⚙</div> Project setup
+   584→    </div>
+   585→    <div class="nav-item" onclick="showPage('costs')" id="nav-costs">
+   586→      <div class="nav-icon">💸</div> Cost inputs
+   587→      <div class="nav-badge" id="nb-costs">0</div>
+   588→    </div>
+   589→    <div class="nav-item" onclick="showPage('tracking')" id="nav-tracking">
+   590→      <div class="nav-icon">⏱</div> Time tracking
+   591→    </div>
+   592→    <div class="nav-item" onclick="showPage('assumptions')" id="nav-assumptions">
+   593→      <div class="nav-icon">🎯</div> Assumptions
+   594→    </div>
+   595→    <div class="nav-item" onclick="showPage('analysis')" id="nav-analysis">
+   596→      <div class="nav-icon">📊</div> Analysis
+   597→    </div>
+   598→    <div class="nav-item" onclick="showPage('evm')" id="nav-evm">
+   599→      <div class="nav-icon">📈</div> Budget &amp; schedule
+   600→    </div>
+   601→    <div class="nav-item" onclick="showPage('report')" id="nav-report">
+   602→      <div class="nav-icon">📋</div> Report
+   603→    </div>
+   604→  </div>
+   605→
+   606→  <div class="sidebar-section">
+   607→    <div class="sidebar-label">Cost categories</div>
+   608→    <div class="cat-nav-item" onclick="showPage('costs'); scrollToCat('labour')">
+   609→      <div class="cat-dot" style="background:var(--cat-labour)"></div>
+   610→      Labour <span style="margin-left:auto;font-size:11px;color:var(--ink3)" id="snb-labour">—</span>
+   611→    </div>
+   612→    <div class="cat-nav-item" onclick="showPage('costs'); scrollToCat('infra')">
+   613→      <div class="cat-dot" style="background:var(--cat-infra)"></div>
+   614→      Cloud / Infra <span style="margin-left:auto;font-size:11px;color:var(--ink3)" id="snb-infra">—</span>
+   615→    </div>
+   616→    <div class="cat-nav-item" onclick="showPage('costs'); scrollToCat('apis')">
+   617→      <div class="cat-dot" style="background:var(--cat-apis)"></div>
+   618→      APIs / SaaS <span style="margin-left:auto;font-size:11px;color:var(--ink3)" id="snb-apis">—</span>
+   619→    </div>
+   620→    <div class="cat-nav-item" onclick="showPage('costs'); scrollToCat('llm')">
+   621→      <div class="cat-dot" style="background:var(--cat-llm)"></div>
+   622→      LLM / AI <span style="margin-left:auto;font-size:11px;color:var(--ink3)" id="snb-llm">—</span>
+   623→    </div>
+   624→    <div class="cat-nav-item" onclick="showPage('costs'); scrollToCat('overhead')">
+   625→      <div class="cat-dot" style="background:var(--cat-overhead)"></div>
+   626→      Overhead <span style="margin-left:auto;font-size:11px;color:var(--ink3)" id="snb-overhead">—</span>
+   627→    </div>
+   628→  </div>
+   629→
+   630→  <div class="sidebar-totals">
+   631→    <div class="st-row"><span class="st-label">One-time costs</span><span class="st-value" id="st-onetime">—</span></div>
+   632→    <div class="st-row"><span class="st-label">Monthly recurring</span><span class="st-value" id="st-monthly">—</span></div>
+   633→    <div class="st-row"><span class="st-label">Per-unit variable</span><span class="st-value" id="st-perunit">—</span></div>
+   634→    <div class="st-row"><span class="st-label">Total project cost</span><span class="st-value" id="st-total">—</span></div>
+   635→  </div>
+   636→</div>
+   637→
+   638→<!-- ── MAIN ────────────────────────────────────────────────────── -->
+   639→<div class="main">
+   640→
+   641→<!-- ══ PAGE: PROJECT SETUP ══════════════════════════════════════ -->
+   642→<div class="page active" id="page-project">
+   643→  <div class="page-header">
+   644→    <div><div class="ph-title">Project setup</div><div class="ph-sub">Configure your project basics — all fields feed into every calculation</div></div>
+   645→    <div class="ph-actions">
+   646→      <button class="btn btn-primary" onclick="showPage('costs')">Next: Cost inputs →</button>
+   647→    </div>
+   648→  </div>
+   649→  <div class="content">
+   650→
+   651→    <div class="card section-gap">
+   652→      <div class="card-header"><div><div class="card-title">Project details</div><div class="card-sub">Core metadata used on the report cover and in all calculations</div></div></div>
+   653→      <div class="form-grid g2">
+   654→        <div class="field">
+   655→          <label class="field-label">Project name</label>
+   656→          <input type="text" id="f-projName" value="AI-Powered Analytics SaaS" oninput="recalcAll()" placeholder="e.g. Customer Intelligence Platform">
+   657→        </div>
+   658→        <div class="field">
+   659→          <label class="field-label">Project description</label>
+   660→          <input type="text" id="f-projDesc" value="B2B SaaS platform with LLM-powered insights" oninput="recalcAll()" placeholder="One-line description">
+   661→        </div>
+   662→        <div class="field">
+   663→          <label class="field-label" data-tip="Development + launch duration. Multiplies all monthly costs.">Development duration (months)</label>
+   664→          <input type="number" id="f-duration" value="12" min="1" max="120" step="1" oninput="recalcAll()">
+   665→          <div class="field-hint">Monthly recurring costs × this number = total recurring spend</div>
+   666→        </div>
+   667→        <div class="field">
+   668→          <label class="field-label">Currency</label>
+   669→          <select id="f-currency" onchange="recalcAll()">
+   670→            <option value="$">USD — US Dollar ($)</option>
+   671→            <option value="£">GBP — British Pound (£)</option>
+   672→            <option value="€">EUR — Euro (€)</option>
+   673→            <option value="₹">INR — Indian Rupee (₹)</option>
+   674→            <option value="A$">AUD — Australian Dollar (A$)</option>
+   675→            <option value="C$">CAD — Canadian Dollar (C$)</option>
+   676→          </select>
+   677→        </div>
+   678→        <div class="field">
+   679→          <label class="field-label">Product category</label>
+   680→          <select id="f-prodCat" onchange="recalcAll()">
+   681→            <option value="b2b-saas">B2B SaaS</option>
+   682→            <option value="b2c-saas">B2C SaaS / Consumer app</option>
+   683→            <option value="api-platform">API / Developer platform</option>
+   684→            <option value="marketplace">Marketplace</option>
+   685→            <option value="internal-tool">Internal tool / Enterprise</option>
+   686→            <option value="on-premises">On premises</option>
+   687→          </select>
+   688→        </div>
+   689→        <div class="field">
+   690→          <label class="field-label">Team location</label>
+   691→          <select id="f-teamLoc" onchange="recalcAll()">
+   692→            <option value="uk">United Kingdom</option>
+   693→            <option value="us">United States</option>
+   694→            <option value="eu">Western Europe</option>
+   695→            <option value="eastern-eu">Eastern Europe</option>
+   696→            <option value="india">India</option>
+   697→            <option value="mixed">Mixed / Remote</option>
+   698→          </select>
+   699→        </div>
+   700→      </div>
+   701→    </div>
+   702→
+   703→    <div class="card section-gap">
+   704→      <div class="card-header"><div><div class="card-title">Unit definition</div><div class="card-sub">Define what you are selling — this flows into all pricing and volume calculations</div></div></div>
+   705→      <div class="form-grid g3">
+   706→        <div class="field">
+   707→          <label class="field-label">Unit / licence label</label>
+   708→          <input type="text" id="f-unitLabel" value="Seats" oninput="recalcAll()" placeholder="e.g. Seats, Licences, Users">
+   709→          <div class="field-hint">What one sale unit is called throughout the tool</div>
+   710→        </div>
+   711→        <div class="field">
+   712→          <label class="field-label" data-tip="Planned sales volume during the first sales period (e.g. 12 months)">Target volume (units to sell)</label>
+   713→          <input type="number" id="f-targetVol" value="500" min="1" oninput="recalcAll()">
+   714→        </div>
+   715→        <div class="field">
+   716→          <label class="field-label">Sales period (months)</label>
+   717→          <input type="number" id="f-salesPeriod" value="12" min="1" oninput="recalcAll()">
+   718→          <div class="field-hint">Time window to reach target volume</div>
+   719→        </div>
+   720→      </div>
+   721→    </div>
+   722→
+   723→    <div class="card">
+   724→      <div class="card-header"><div><div class="card-title">Current state snapshot</div></div></div>
+   725→      <div class="metric-grid mg-4">
+   726→        <div class="metric-card blue"><div class="mc-label">Project name</div><div class="mc-value" id="snap-name" style="font-size:14px;word-break:break-word">—</div></div>
+   727→        <div class="metric-card"><div class="mc-label">Duration</div><div class="mc-value" id="snap-dur">—</div><div class="mc-sub">months development</div></div>
+   728→        <div class="metric-card"><div class="mc-label">Unit type</div><div class="mc-value" id="snap-unit" style="font-size:14px">—</div></div>
+   729→        <div class="metric-card"><div class="mc-label">Target volume</div><div class="mc-value" id="snap-vol">—</div><div class="mc-sub" id="snap-volsub">—</div></div>
+   730→      </div>
+   731→    </div>
+   732→
+   733→  </div>
+   734→</div>
+   735→
+   736→<!-- ══ PAGE: COST INPUTS ════════════════════════════════════════ -->
+   737→<div class="page" id="page-costs">
+   738→  <div class="page-header">
+   739→    <div><div class="ph-title">Cost inputs</div><div class="ph-sub">Every line item is live — changes instantly update all downstream calculations</div></div>
+   740→    <div class="ph-actions">
+   741→      <button class="btn btn-secondary" onclick="showPage('project')">← Setup</button>
+   742→      <button class="btn btn-primary" onclick="showPage('assumptions')">Next: Assumptions →</button>
+   743→    </div>
+   744→  </div>
+   745→  <div class="content">
+   746→
+   747→    <div class="info-box">
+   748→      💡 <strong>Cost types explained:</strong> <strong>Monthly</strong> = recurring spend × project duration months &nbsp;|&nbsp; <strong>One-time</strong> = fixed spend paid once &nbsp;|&nbsp; <strong>Per-unit</strong> = variable cost for each unit sold (scales with volume)
+   749→    </div>
+   750→
+   751→    <!-- LABOUR -->
+   752→    <div class="card section-gap" id="cat-labour">
+   753→      <div class="cost-section-header">
+   754→        <div class="csh-left">
+   755→          <div class="csh-icon" style="background:#dbeafe;color:var(--cat-labour)">👷</div>
+   756→          <div><div class="csh-title">Labour &amp; team</div><div class="csh-count" id="cc-labour">0 items</div></div>
+   757→        </div>
+   758→        <div style="display:flex;align-items:center;gap:12px">
+   759→          <div class="csh-total" style="color:var(--cat-labour)" id="ct-labour">—</div>
+   760→        </div>
+   761→      </div>
+   762→      <table class="cost-table" id="tbl-labour">
+   763→        <thead><tr>
+   764→          <th style="width:22%">Role / description</th>
+   765→          <th style="width:11%">Rate basis</th>
+   766→          <th style="width:10%">Rate</th>
+   767→          <th style="width:9%">Hrs/mo (plan)</th>
+   768→          <th style="width:8%">Count</th>
+   769→          <th style="width:11%">Type</th>
+   770→          <th class="r" style="width:13%">Line total</th>
+   771→          <th style="width:11%">Notes</th>
+   772→          <th style="width:5%"></th>
+   773→        </tr></thead>
+   774→        <tbody id="rows-labour"></tbody>
+   775→      </table>
+   776→      <button class="add-row-btn" onclick="addRow('labour')">+ Add team member / role</button>
+   777→      <div class="info-box" style="margin-top:10px">
+   778→        💡 <strong>Rate basis:</strong> choose <strong>Monthly salary</strong> (rate = full monthly cost, hours are for capacity planning only) or <strong>Hourly rate</strong> (rate × planned hours/month = monthly cost). Both feed the same total — switch any resource at any time without breaking calculations.
+   779→      </div>
+   780→    </div>
+   781→
+   782→    <!-- CLOUD INFRA -->
+   783→    <div class="card section-gap" id="cat-infra">
+   784→      <div class="cost-section-header">
+   785→        <div class="csh-left">
+   786→          <div class="csh-icon" style="background:#ccfbf1;color:var(--cat-infra)">☁</div>
+   787→          <div><div class="csh-title">Cloud &amp; infrastructure</div><div class="csh-count" id="cc-infra">0 items</div></div>
+   788→        </div>
+   789→        <div class="csh-total" style="color:var(--cat-infra)" id="ct-infra">—</div>
+   790→      </div>
+   791→      <table class="cost-table" id="tbl-infra">
+   792→        <thead><tr>
+   793→          <th style="width:30%">Service / description</th>
+   794→          <th style="width:13%">Cost / mo</th>
+   795→          <th style="width:10%">Units</th>
+   796→          <th style="width:15%">Type</th>
+   797→          <th class="r" style="width:14%">Line total</th>
+   798→          <th style="width:8%">Notes</th>
+   799→          <th style="width:5%"></th>
+   800→        </tr></thead>
+   801→        <tbody id="rows-infra"></tbody>
+   802→      </table>
+   803→      <button class="add-row-btn" onclick="addRow('infra')">+ Add cloud / infra item</button>
+   804→    </div>
+   805→
+   806→    <!-- APIS -->
+   807→    <div class="card section-gap" id="cat-apis">
+   808→      <div class="cost-section-header">
+   809→        <div class="csh-left">
+   810→          <div class="csh-icon" style="background:#ede9fe;color:var(--cat-apis)">🔌</div>
+   811→          <div><div class="csh-title">APIs &amp; SaaS tools</div><div class="csh-count" id="cc-apis">0 items</div></div>
+   812→        </div>
+   813→        <div class="csh-total" style="color:var(--cat-apis)" id="ct-apis">—</div>
+   814→      </div>
+   815→      <table class="cost-table" id="tbl-apis">
+   816→        <thead><tr>
+   817→          <th style="width:30%">Service / provider</th>
+   818→          <th style="width:13%">Cost / mo</th>
+   819→          <th style="width:10%">Units</th>
+   820→          <th style="width:15%">Type</th>
+   821→          <th class="r" style="width:14%">Line total</th>
+   822→          <th style="width:8%">Notes</th>
+   823→          <th style="width:5%"></th>
+   824→        </tr></thead>
+   825→        <tbody id="rows-apis"></tbody>
+   826→      </table>
+   827→      <button class="add-row-btn" onclick="addRow('apis')">+ Add API / SaaS tool</button>
+   828→    </div>
+   829→
+   830→    <!-- LLM -->
+   831→    <div class="card section-gap" id="cat-llm">
+   832→      <div class="cost-section-header">
+   833→        <div class="csh-left">
+   834→          <div class="csh-icon" style="background:#fef9c3;color:var(--cat-llm)">🤖</div>
+   835→          <div><div class="csh-title">LLM &amp; AI costs</div><div class="csh-count" id="cc-llm">0 items</div></div>
+   836→        </div>
+   837→        <div class="csh-total" style="color:var(--cat-llm)" id="ct-llm">—</div>
+   838→      </div>
+   839→      <div class="info-box" style="margin-top:8px;margin-bottom:0">
+   840→        🧮 <strong>Token estimator:</strong> Use the built-in estimator rows — enter your model and usage, and the monthly cost is auto-calculated. Or enter a known monthly cost directly.
+   841→      </div>
+   842→      <table class="cost-table" id="tbl-llm">
+   843→        <thead><tr>
+   844→          <th style="width:30%">Model / provider</th>
+   845→          <th style="width:13%">Est. cost/mo</th>
+   846→          <th style="width:10%">Units</th>
+   847→          <th style="width:15%">Type</th>
+   848→          <th class="r" style="width:14%">Line total</th>
+   849→          <th style="width:8%">Notes</th>
+   850→          <th style="width:5%"></th>
+   851→        </tr></thead>
+   852→        <tbody id="rows-llm"></tbody>
+   853→      </table>
+   854→      <button class="add-row-btn" onclick="addRow('llm')">+ Add LLM / AI model cost</button>
+   855→    </div>
+   856→
+   857→    <!-- OVERHEAD -->
+   858→    <div class="card section-gap" id="cat-overhead">
+   859→      <div class="cost-section-header">
+   860→        <div class="csh-left">
+   861→          <div class="csh-icon" style="background:#f1f5f9;color:var(--cat-overhead)">🏢</div>
+   862→          <div><div class="csh-title">Overhead &amp; contingency</div><div class="csh-count" id="cc-overhead">0 items</div></div>
+   863→        </div>
+   864→        <div class="csh-total" style="color:var(--cat-overhead)" id="ct-overhead">—</div>
+   865→      </div>
+   866→      <table class="cost-table" id="tbl-overhead">
+   867→        <thead><tr>
+   868→          <th style="width:30%">Item / description</th>
+   869→          <th style="width:13%">Cost</th>
+   870→          <th style="width:10%">Units</th>
+   871→          <th style="width:15%">Type</th>
+   872→          <th class="r" style="width:14%">Line total</th>
+   873→          <th style="width:8%">Notes</th>
+   874→          <th style="width:5%"></th>
+   875→        </tr></thead>
+   876→        <tbody id="rows-overhead"></tbody>
+   877→      </table>
+   878→      <button class="add-row-btn" onclick="addRow('overhead')">+ Add overhead item</button>
+   879→    </div>
+   880→
+   881→  </div>
+   882→</div>
+   883→
+   884→<!-- ══ PAGE: TIME TRACKING ══════════════════════════════════════ -->
+   885→<div class="page" id="page-tracking">
+   886→  <div class="page-header">
+   887→    <div><div class="ph-title">Time tracking</div><div class="ph-sub">Log actual hours per resource per month — compares against planned hours and cost automatically</div></div>
+   888→    <div class="ph-actions">
+   889→      <button class="btn btn-secondary" onclick="showPage('costs')">← Costs</button>
+   890→      <button class="btn btn-primary" onclick="showPage('evm')">Budget &amp; schedule →</button>
+   891→    </div>
+   892→  </div>
+   893→  <div class="content">
+   894→
+   895→    <div class="info-box">
+   896→      💡 <strong>How this works:</strong> for every labour resource, enter the actual hours worked in each month. The system compares this against planned hours (derived from monthly salary ÷ standard hours, or your entered hourly plan) to calculate cost variance and schedule variance — the same method professional project managers use (Earned Value Management).
+   897→    </div>
+   898→
+   899→    <div class="card section-gap">
+   900→      <div class="form-grid g3">
+   901→        <div class="field">
+   902→          <label class="field-label" data-tip="Used to convert monthly salary into an implied hourly rate for variance math">Standard working hours / month</label>
+   903→          <input type="number" id="f-stdHours" value="160" min="1" oninput="recalcAll()">
+   904→          <div class="field-hint">Typically 160–173 hrs (4.33 weeks × 37–40 hrs)</div>
+   905→        </div>
+   906→        <div class="field">
+   907→          <label class="field-label" data-tip="Which month of the project are we currently in — drives Actual vs Planned comparisons">Current month (as of)</label>
+   908→          <input type="number" id="f-currentMonth" value="6" min="1" oninput="recalcAll()">
+   909→          <div class="field-hint">Project month number you're reporting as of</div>
+   910→        </div>
+   911→        <div class="field">
+   912→          <label class="field-label">Planned project duration</label>
+   913→          <input type="text" id="f-durationEcho" value="12 months" readonly style="background:var(--bg);color:var(--ink3)">
+   914→          <div class="field-hint">Synced from Project Setup page</div>
+   915→        </div>
+   916→      </div>
+   917→    </div>
+   918→
+   919→    <div class="card">
+   920→      <div class="card-header">
+   921→        <div><div class="card-title">Monthly actual hours by resource</div><div class="card-sub">Enter actual hours worked each month. Blank = not yet logged (assumed on-plan for future months).</div></div>
+   922→      </div>
+   923→      <div style="overflow-x:auto">
+   924→        <table class="cost-table" id="tbl-tracking" style="min-width:1100px">
+   925→          <thead><tr id="tracking-header-row">
+   926→            <th style="width:180px;position:sticky;left:0;background:var(--surface);z-index:2">Resource</th>
+   927→            <th style="width:90px">Plan hrs/mo</th>
+   928→          </tr></thead>
+   929→          <tbody id="rows-tracking"></tbody>
+   930→        </table>
+   931→      </div>
+   932→    </div>
+   933→
+   934→  </div>
+   935→</div>
+   936→
+   937→<!-- ══ PAGE: BUDGET & SCHEDULE (EVM) ════════════════════════════ -->
+   938→<div class="page" id="page-evm">
+   939→  <div class="page-header">
+   940→    <div><div class="ph-title">Budget &amp; schedule performance</div><div class="ph-sub">Earned Value Management — where the project actually stands vs. the plan, and where it's heading</div></div>
+   941→    <div class="ph-actions">
+   942→      <button class="btn btn-secondary" onclick="showPage('tracking')">← Time tracking</button>
+   943→      <button class="btn btn-primary" onclick="showPage('report')">View report →</button>
+   944→    </div>
+   945→  </div>
+   946→  <div class="content">
+   947→
+   948→    <!-- EVM core metrics -->
+   949→    <div class="metric-grid mg-4 section-gap">
+   950→      <div class="metric-card" id="mc-pv"><div class="mc-label">Planned value (PV)</div><div class="mc-value" id="evm-pv">—</div><div class="mc-sub">Budgeted cost of work scheduled</div></div>
+   951→      <div class="metric-card" id="mc-ev"><div class="mc-label">Earned value (EV)</div><div class="mc-value" id="evm-ev">—</div><div class="mc-sub">Budgeted cost of work done</div></div>
+   952→      <div class="metric-card" id="mc-ac"><div class="mc-label">Actual cost (AC)</div><div class="mc-value" id="evm-ac">—</div><div class="mc-sub">Real cost spent to date</div></div>
+   953→      <div class="metric-card" id="mc-eac"><div class="mc-label">Forecast at completion</div><div class="mc-value" id="evm-eac">—</div><div class="mc-sub" id="evm-eac-sub">EAC — projected final cost</div></div>
+   954→    </div>
+   955→
+   956→    <div class="metric-grid mg-4 section-gap">
+   957→      <div class="metric-card" id="mc-cv"><div class="mc-label">Cost variance (CV)</div><div class="mc-value" id="evm-cv">—</div><div class="mc-sub" id="evm-cv-sub">EV − AC</div></div>
+   958→      <div class="metric-card" id="mc-sv"><div class="mc-label">Schedule variance (SV)</div><div class="mc-value" id="evm-sv">—</div><div class="mc-sub" id="evm-sv-sub">EV − PV</div></div>
+   959→      <div class="metric-card" id="mc-cpi"><div class="mc-label">Cost performance index</div><div class="mc-value" id="evm-cpi">—</div><div class="mc-sub" id="evm-cpi-sub">CPI = EV ÷ AC</div></div>
+   960→      <div class="metric-card" id="mc-spi"><div class="mc-label">Schedule performance index</div><div class="mc-value" id="evm-spi">—</div><div class="mc-sub" id="evm-spi-sub">SPI = EV ÷ PV</div></div>
+   961→    </div>
+   962→
+   963→    <!-- Status verdict -->
+   964→    <div id="evm-status-box" class="section-gap"></div>
+   965→
+   966→    <!-- Quadrant scatter -->
+   967→    <div class="card section-gap">
+   968→      <div class="card-header"><div><div class="card-title">Budget vs. schedule position</div><div class="card-sub">Where your project sits right now — ideal is top-right (under budget, ahead of schedule)</div></div></div>
+   969→      <div id="evm-quadrant" style="display:flex;justify-content:center;padding:10px 0"></div>
+   970→      <div style="display:flex;justify-content:center;gap:20px;font-size:12px;margin-top:8px;color:var(--ink3)">
+   971→        <span>🔴 Over budget</span><span>🟢 Under budget</span><span>⬆ Ahead of schedule</span><span>⬇ Behind schedule</span>
+   972→      </div>
+   973→    </div>
+   974→
+   975→    <!-- Cost trend -->
+   976→    <div class="card section-gap">
+   977→      <div class="card-header"><div><div class="card-title">Planned vs. actual cost curve</div><div class="card-sub">Cumulative spend over project duration — where the lines diverge tells the story</div></div></div>
+   978→      <div id="evm-trend-chart"></div>
+   979→    </div>
+   980→
+   981→    <!-- Resource-level variance table -->
+   982→    <div class="card section-gap">
+   983→      <div class="card-header"><div><div class="card-title">Per-resource variance</div><div class="card-sub">Which roles are driving the overall variance</div></div></div>
+   984→      <div style="overflow-x:auto">
+   985→        <table class="sens-table">
+   986→          <thead><tr>
+   987→            <th>Resource</th>
+   988→            <th class="r">Plan hrs to date</th>
+   989→            <th class="r">Actual hrs to date</th>
+   990→            <th class="r">Planned cost</th>
+   991→            <th class="r">Actual cost</th>
+   992→            <th class="r">Variance</th>
+   993→            <th>Status</th>
+   994→          </tr></thead>
+   995→          <tbody id="evm-resource-tbody"></tbody>
+   996→        </table>
+   997→      </div>
+   998→    </div>
+   999→
+  1000→    <!-- Recommendations -->
+  1001→    <div class="card">
+  1002→      <div class="card-header"><div><div class="card-title">Recommendations to improve cost performance</div><div class="card-sub">Generated live from your current CPI, SPI, and resource variance data</div></div></div>
+  1003→      <div id="evm-recommendations"></div>
+  1004→    </div>
+  1005→
+  1006→  </div>
+  1007→</div>
+  1008→
+  1009→<!-- ══ PAGE: ASSUMPTIONS ════════════════════════════════════════ -->
+  1010→<div class="page" id="page-assumptions">
+  1011→  <div class="page-header">
+  1012→    <div><div class="ph-title">Assumptions &amp; targets</div><div class="ph-sub">Set your pricing strategy, profit target, and scenario variables</div></div>
+  1013→    <div class="ph-actions">
+  1014→      <button class="btn btn-secondary" onclick="showPage('costs')">← Costs</button>
+  1015→      <button class="btn btn-primary" onclick="showPage('analysis')">Next: Analysis →</button>
+  1016→    </div>
+  1017→  </div>
+  1018→  <div class="content">
+  1019→
+  1020→    <div class="card section-gap">
+  1021→      <div class="card-header"><div><div class="card-title">Pricing strategy</div></div></div>
+  1022→      <div class="form-grid g2">
+  1023→        <div class="field">
+  1024→          <label class="field-label" data-tip="Your desired profit as % of revenue. The selling price is derived from this + cost/unit.">Target profit margin (%)</label>
+  1025→          <div class="range-row">
+  1026→            <input type="range" id="f-margin" min="1" max="90" step="1" value="35" oninput="recalcAll()">
+  1027→            <div class="range-val" id="rv-margin">35%</div>
+  1028→          </div>
+  1029→          <div class="field-hint">Derived selling price = Cost per unit ÷ (1 – margin%)</div>
+  1030→        </div>
+  1031→        <div class="field">
+  1032→          <label class="field-label">Manual selling price (leave blank to auto-derive)</label>
+  1033→          <input type="number" id="f-sellingPrice" placeholder="Auto-calculated from margin" oninput="recalcAll()">
+  1034→          <div class="field-hint" id="fh-derived-price">Set above, or override here</div>
+  1035→        </div>
+  1036→        <div class="field">
+  1037→          <label class="field-label" data-tip="Expected monthly revenue growth after launch — e.g. from upsells or new customers">Annual price / volume growth (%)</label>
+  1038→          <div class="range-row">
+  1039→            <input type="range" id="f-growth" min="0" max="50" step="1" value="10" oninput="recalcAll()">
+  1040→            <div class="range-val" id="rv-growth">10%</div>
+  1041→          </div>
+  1042→        </div>
+  1043→        <div class="field">
+  1044→          <label class="field-label" data-tip="Monthly customer churn — percentage of customers who cancel each month">Monthly churn rate (%)</label>
+  1045→          <div class="range-row">
+  1046→            <input type="range" id="f-churn" min="0" max="20" step="0.5" value="3" oninput="recalcAll()">
+  1047→            <div class="range-val" id="rv-churn">3%</div>
+  1048→          </div>
+  1049→        </div>
+  1050→      </div>
+  1051→    </div>
+  1052→
+  1053→    <div class="card section-gap">
+  1054→      <div class="card-header"><div><div class="card-title">Scenario volumes</div><div class="card-sub">Three scenarios drive the sensitivity analysis and verdict</div></div></div>
+  1055→      <div class="form-grid g3">
+  1056→        <div class="field">
+  1057→          <label class="field-label">Optimistic volume (units)</label>
+  1058→          <input type="number" id="f-volOpt" value="800" oninput="recalcAll()">
+  1059→          <div class="field-hint">Best case — strong market uptake</div>
+  1060→        </div>
+  1061→        <div class="field">
+  1062→          <label class="field-label">Base case volume (units)</label>
+  1063→          <input type="number" id="f-volBase" value="500" oninput="recalcAll()">
+  1064→          <div class="field-hint">Expected — mirrors your target volume</div>
+  1065→        </div>
+  1066→        <div class="field">
+  1067→          <label class="field-label">Pessimistic volume (units)</label>
+  1068→          <input type="number" id="f-volPess" value="200" oninput="recalcAll()">
+  1069→          <div class="field-hint">Worst case — slow adoption</div>
+  1070→        </div>
+  1071→      </div>
+  1072→    </div>
+  1073→
+  1074→    <div class="card section-gap">
+  1075→      <div class="card-header"><div><div class="card-title">Risk buffers</div><div class="card-sub">Applied in worst-case sensitivity scenarios</div></div></div>
+  1076→      <div class="form-grid g2">
+  1077→        <div class="field">
+  1078→          <label class="field-label" data-tip="Added to total cost in overrun scenarios to model risk">Cost overrun buffer (%)</label>
+  1079→          <div class="range-row">
+  1080→            <input type="range" id="f-costBuffer" min="0" max="50" step="1" value="15" oninput="recalcAll()">
+  1081→            <div class="range-val" id="rv-costBuffer">15%</div>
+  1082→          </div>
+  1083→        </div>
+  1084→        <div class="field">
+  1085→          <label class="field-label" data-tip="Minimum ROI % required to flag as Go">Minimum ROI threshold (%)</label>
+  1086→          <input type="number" id="f-minROI" value="15" min="0" oninput="recalcAll()">
+  1087→        </div>
+  1088→        <div class="field">
+  1089→          <label class="field-label" data-tip="Maximum payback period in months to still flag as Go">Max payback period (months)</label>
+  1090→          <input type="number" id="f-maxPayback" value="36" min="1" oninput="recalcAll()">
+  1091→        </div>
+  1092→        <div class="field">
+  1093→          <label class="field-label" data-tip="Minimum gross margin % required to flag as Go">Minimum gross margin (%)</label>
+  1094→          <input type="number" id="f-minMargin" value="20" min="0" oninput="recalcAll()">
+  1095→        </div>
+  1096→      </div>
+  1097→    </div>
+  1098→
+  1099→    <div class="card">
+  1100→      <div class="card-header"><div><div class="card-title">Live derived outputs from assumptions</div></div></div>
+  1101→      <div class="metric-grid mg-4">
+  1102→        <div class="metric-card blue"><div class="mc-label">Derived price</div><div class="mc-value" id="ass-price">—</div><div class="mc-sub">per unit sold</div></div>
+  1103→        <div class="metric-card"><div class="mc-label">Cost per unit</div><div class="mc-value" id="ass-cpu">—</div><div class="mc-sub">at base volume</div></div>
+  1104→        <div class="metric-card green"><div class="mc-label">Target revenue</div><div class="mc-value" id="ass-rev">—</div><div class="mc-sub">base case</div></div>
+  1105→        <div class="metric-card purple"><div class="mc-label">Effective churn impact</div><div class="mc-value" id="ass-churn">—</div><div class="mc-sub">units lost / yr</div></div>
+  1106→      </div>
+  1107→    </div>
+  1108→
+  1109→  </div>
+  1110→</div>
+  1111→
+  1112→<!-- ══ PAGE: ANALYSIS ══════════════════════════════════════════ -->
+  1113→<div class="page" id="page-analysis">
+  1114→  <div class="page-header">
+  1115→    <div><div class="ph-title">Analysis</div><div class="ph-sub">Break-even, sensitivity, cash flow — all driven live from your inputs</div></div>
+  1116→    <div class="ph-actions">
+  1117→      <button class="btn btn-secondary" onclick="showPage('assumptions')">← Assumptions</button>
+  1118→      <button class="btn btn-primary" onclick="showPage('report')">View report →</button>
+  1119→    </div>
+  1120→  </div>
+  1121→  <div class="content">
+  1122→
+  1123→    <!-- Key metrics -->
+  1124→    <div class="metric-grid mg-3 section-gap" style="margin-bottom:16px">
+  1125→      <div class="metric-card blue"><div class="mc-label">Total project cost</div><div class="mc-value" id="an-totalCost">—</div><div class="mc-sub" id="an-totalCostSub">—</div></div>
+  1126→      <div class="metric-card"><div class="mc-label">Monthly burn rate</div><div class="mc-value" id="an-burn">—</div><div class="mc-sub">recurring / month</div></div>
+  1127→      <div class="metric-card amber"><div class="mc-label">One-time investment</div><div class="mc-value" id="an-onetime">—</div><div class="mc-sub">setup &amp; launch</div></div>
+  1128→    </div>
+  1129→
+  1130→    <div class="metric-grid mg-3 section-gap">
+  1131→      <div class="metric-card" id="mc-be"><div class="mc-label">Break-even units</div><div class="mc-value" id="an-beUnits">—</div><div class="mc-sub" id="an-beSub">—</div></div>
+  1132→      <div class="metric-card" id="mc-payback"><div class="mc-label">Payback period</div><div class="mc-value" id="an-payback">—</div><div class="mc-sub" id="an-paybackSub">—</div></div>
+  1133→      <div class="metric-card" id="mc-roi"><div class="mc-label">Projected ROI</div><div class="mc-value" id="an-roi">—</div><div class="mc-sub" id="an-roiSub">—</div></div>
+  1134→      <div class="metric-card" id="mc-gm"><div class="mc-label">Gross margin</div><div class="mc-value" id="an-gm">—</div><div class="mc-sub" id="an-gmSub">—</div></div>
+  1135→      <div class="metric-card" id="mc-berev"><div class="mc-label">Break-even revenue</div><div class="mc-value" id="an-beRev">—</div><div class="mc-sub">to recover all costs</div></div>
+  1136→      <div class="metric-card purple"><div class="mc-label">Net profit at target</div><div class="mc-value" id="an-netProfit">—</div><div class="mc-sub">base case</div></div>
+  1137→    </div>
+  1138→
+  1139→    <!-- Progress meter -->
+  1140→    <div class="card section-gap">
+  1141→      <div class="card-title" style="margin-bottom:12px">Break-even progress — target volume vs. required units</div>
+  1142→      <div class="progress-meter">
+  1143→        <div class="pm-row"><span>0</span><span id="pm-be-label">BE: — units</span><span id="pm-target-label">Target: — units</span></div>
+  1144→        <div class="pm-track"><div class="pm-fill" id="pm-fill" style="width:0%;background:var(--green)"></div></div>
+  1145→      </div>
+  1146→      <div style="font-size:12px;color:var(--ink3);margin-top:6px" id="pm-desc">Enter costs and targets to see break-even progress</div>
+  1147→    </div>
+  1148→
+  1149→    <!-- Tabs -->
+  1150→    <div class="tab-bar">
+  1151→      <button class="tab-btn active" onclick="showTab('cost-breakdown',this)">Cost breakdown</button>
+  1152→      <button class="tab-btn" onclick="showTab('sensitivity',this)">Sensitivity</button>
+  1153→      <button class="tab-btn" onclick="showTab('cashflow',this)">Cash flow</button>
+  1154→      <button class="tab-btn" onclick="showTab('waterfall',this)">Margin waterfall</button>
+  1155→    </div>
+  1156→
+  1157→    <!-- Cost breakdown -->
+  1158→    <div class="tab-panel active" id="tab-cost-breakdown">
+  1159→      <div class="card">
+  1160→        <div class="card-title" style="margin-bottom:14px">Cost by category</div>
+  1161→        <div class="bar-chart" id="cost-bar-chart"></div>
+  1162→        <div class="divider"></div>
+  1163→        <div id="cost-breakdown-table"></div>
+  1164→      </div>
+  1165→    </div>
+  1166→
+  1167→    <!-- Sensitivity -->
+  1168→    <div class="tab-panel" id="tab-sensitivity">
+  1169→      <div class="card">
+  1170→        <div class="card-title" style="margin-bottom:14px">Sensitivity analysis — 10 scenarios</div>
+  1171→        <div style="overflow-x:auto">
+  1172→          <table class="sens-table">
+  1173→            <thead><tr>
+  1174→              <th>Scenario</th>
+  1175→              <th class="r">BE units</th>
+  1176→              <th class="r">Revenue needed</th>
+  1177→              <th class="r">ROI</th>
+  1178→              <th class="r">Payback</th>
+  1179→              <th>Verdict</th>
+  1180→            </tr></thead>
+  1181→            <tbody id="sens-tbody"></tbody>
+  1182→          </table>
+  1183→        </div>
+  1184→      </div>
+  1185→    </div>
+  1186→
+  1187→    <!-- Cash flow -->
+  1188→    <div class="tab-panel" id="tab-cashflow">
+  1189→      <div class="card">
+  1190→        <div class="card-title" style="margin-bottom:14px">Cumulative cash flow — 24 months</div>
+  1191→        <div class="cf-chart" id="cf-chart"></div>
+  1192→      </div>
+  1193→    </div>
+  1194→
+  1195→    <!-- Waterfall -->
+  1196→    <div class="tab-panel" id="tab-waterfall">
+  1197→      <div class="card">
+  1198→        <div class="card-title" style="margin-bottom:14px">Revenue to profit waterfall</div>
+  1199→        <div class="waterfall" id="wf-chart"></div>
+  1200→      </div>
+  1201→    </div>
+  1202→
+  1203→  </div>
+  1204→</div>
+  1205→
+  1206→<!-- ══ PAGE: REPORT ════════════════════════════════════════════ -->
+  1207→<div class="page" id="page-report">
+  1208→  <div class="page-header">
+  1209→    <div><div class="ph-title">Financial report</div><div class="ph-sub">Live report — every number updates in real time as you change any input</div></div>
+  1210→    <div class="ph-actions" style="position:relative">
+  1211→      <button class="btn btn-secondary" onclick="showPage('analysis')">← Analysis</button>
+  1212→      <div style="position:relative;display:inline-block">
+  1213→        <button class="btn btn-primary" onclick="toggleExportMenu()" id="export-menu-btn">⬇ Export ▾</button>
+  1214→        <div id="export-menu" class="export-menu">
+  1215→          <div class="export-menu-item" onclick="exportExcel()">
+  1216→            <span class="export-icon" style="background:#e8f5e9;color:#1d7a3c">XLS</span>
+  1217→            <div><div class="export-item-title">Excel workbook</div><div class="export-item-sub">6 sheets, live formulas</div></div>
+  1218→          </div>
+  1219→          <div class="export-menu-item" onclick="exportPPTX()">
+  1220→            <span class="export-icon" style="background:#fde8e8;color:#c0392b">PPT</span>
+  1221→            <div><div class="export-item-title">PowerPoint deck</div><div class="export-item-sub">7-slide executive summary</div></div>
+  1222→          </div>
+  1223→          <div class="export-menu-item" onclick="exportPDF()">
+  1224→            <span class="export-icon" style="background:#e8eefd;color:#2952cc">PDF</span>
+  1225→            <div><div class="export-item-title">PDF report</div><div class="export-item-sub">Print-ready, 6 pages</div></div>
+  1226→          </div>
+  1227→          <div class="export-menu-item" onclick="exportJSON()">
+  1228→            <span class="export-icon" style="background:#f1f1f1;color:#555">{ }</span>
+  1229→            <div><div class="export-item-title">Raw data (JSON)</div><div class="export-item-sub">For re-import or backup</div></div>
+  1230→          </div>
+  1231→        </div>
+  1232→      </div>
+  1233→    </div>
+  1234→  </div>
+  1235→  <div id="export-status" class="export-status" style="display:none"></div>
+  1236→  <div class="content">
+  1237→
+  1238→    <!-- VERDICT -->
+  1239→    <div id="report-verdict" class="section-gap"></div>
+  1240→
+  1241→    <!-- DECISION CHECKLIST -->
+  1242→    <div class="card section-gap">
+  1243→      <div class="card-title" style="margin-bottom:12px">Decision checklist — 4 mandatory financial tests</div>
+  1244→      <div class="checklist" id="report-checklist"></div>
+  1245→    </div>
+  1246→
+  1247→    <!-- SUMMARY TABLE -->
+  1248→    <div class="card section-gap">
+  1249→      <div class="report-section">
+  1250→        <div class="rs-title">Project summary</div>
+  1251→        <table class="summary-table" id="report-summary-table"></table>
+  1252→      </div>
+  1253→    </div>
+  1254→
+  1255→    <!-- COST BREAKDOWN -->
+  1256→    <div class="card section-gap">
+  1257→      <div class="report-section">
+  1258→        <div class="rs-title">Cost breakdown by category</div>
+  1259→        <table class="summary-table" id="report-cost-table"></table>
+  1260→      </div>
+  1261→    </div>
+  1262→
+  1263→    <!-- KEY FORMULAS -->
+  1264→    <div class="card section-gap">
+  1265→      <div class="report-section">
+  1266→        <div class="rs-title">Key formulas used</div>
+  1267→        <table class="summary-table">
+  1268→          <tr><td>Total project cost</td><td>One-time costs + (Monthly recurring × Duration months)</td></tr>
+  1269→          <tr><td>Cost per unit</td><td>Total project cost ÷ Target volume + Variable cost per unit</td></tr>
+  1270→          <tr><td>Derived selling price</td><td>Cost per unit ÷ (1 − Target margin %)</td></tr>
+  1271→          <tr><td>Break-even units</td><td>Total fixed costs ÷ (Selling price − Variable cost per unit)</td></tr>
+  1272→          <tr><td>Gross margin</td><td>(Selling price − Cost per unit) ÷ Selling price × 100</td></tr>
+  1273→          <tr><td>Payback period</td><td>Total one-time costs ÷ Monthly net profit</td></tr>
+  1274→          <tr><td>Projected ROI</td><td>(Target revenue − Total cost) ÷ Total cost × 100</td></tr>
+  1275→        </table>
+  1276→      </div>
+  1277→    </div>
+  1278→
+  1279→    <!-- ASSUMPTIONS LOG -->
+  1280→    <div class="card section-gap">
+  1281→      <div class="report-section">
+  1282→        <div class="rs-title">Assumptions log</div>
+  1283→        <div id="report-assumptions" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+  1284→      </div>
+  1285→    </div>
+  1286→
+  1287→    <!-- ALL LINE ITEMS -->
+  1288→    <div class="card">
+  1289→      <div class="report-section">
+  1290→        <div class="rs-title">Full cost line items</div>
+  1291→        <table class="summary-table" id="report-line-items"></table>
+  1292→      </div>
+  1293→    </div>
+  1294→
+  1295→  </div>
+  1296→</div>
+  1297→
+  1298→</div><!-- /main -->
+  1299→</div><!-- /layout -->
+  1300→
+  1301→<script>
+  1302→// ═══════════════════════════════════════════════════════════════════
+  1303→// DATA STATE
+  1304→// ═══════════════════════════════════════════════════════════════════
+  1305→let rowIdCounter = 0;
+  1306→
+  1307→const CATS = ['labour','infra','apis','llm','overhead'];
+  1308→const CAT_COLORS = {
+  1309→  labour:   '#1a6cf0',
+  1310→  infra:    '#0ea8a8',
+  1311→  apis:     '#7c3aed',
+  1312→  llm:      '#d97706',
+  1313→  overhead: '#6b7280'
+  1314→};
+  1315→const CAT_LABELS = {
+  1316→  labour: 'Labour & team',
+  1317→  infra: 'Cloud / infra',
+  1318→  apis: 'APIs / SaaS',
+  1319→  llm: 'LLM / AI',
+  1320→  overhead: 'Overhead'
+  1321→};
+  1322→
+  1323→// rows[cat] = [{ id, desc, rate, qty, type, notes, rateBasis, plannedHours }]
+  1324→const rows = { labour:[], infra:[], apis:[], llm:[], overhead:[] };
+  1325→
+  1326→// actualHours[resourceId] = { 1: hrs, 2: hrs, ... } keyed by project month number
+  1327→const actualHours = {};
+  1328→const MAX_TRACK_MONTHS = 24;
+  1329→let lastTrackedDuration = null;
+  1330→
+  1331→// ═══════════════════════════════════════════════════════════════════
+  1332→// NAVIGATION
+  1333→// ═══════════════════════════════════════════════════════════════════
+  1334→function showPage(id) {
+  1335→  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  1336→  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  1337→  document.getElementById('page-'+id).classList.add('active');
+  1338→  document.getElementById('nav-'+id)?.classList.add('active');
+  1339→  recalcAll();
+  1340→}
+  1341→
+  1342→function scrollToCat(cat) {
+  1343→  const el = document.getElementById('cat-'+cat);
+  1344→  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  1345→}
+  1346→
+  1347→function showTab(id, btn) {
+  1348→  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  1349→  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  1350→  document.getElementById('tab-'+id).classList.add('active');
+  1351→  btn.classList.add('active');
+  1352→}
+  1353→
+  1354→// ═══════════════════════════════════════════════════════════════════
+  1355→// ROW MANAGEMENT
+  1356→// ═══════════════════════════════════════════════════════════════════
+  1357→function addRow(cat, data = {}) {
+  1358→  const id = 'r' + (++rowIdCounter);
+  1359→  const row = {
+  1360→    id,
+  1361→    desc:  data.desc  || '',
+  1362→    rate:  data.rate  !== undefined ? data.rate  : 0,
+  1363→    qty:   data.qty   !== undefined ? data.qty   : 1,
+  1364→    type:  data.type  || 'monthly',
+  1365→    notes: data.notes || '',
+  1366→    rateBasis:     data.rateBasis     || 'monthly',  // 'monthly' | 'hourly' — labour only
+  1367→    plannedHours:  data.plannedHours !== undefined ? data.plannedHours : 160, // hrs/mo — labour only
+  1368→  };
+  1369→  rows[cat].push(row);
+  1370→  renderRow(cat, row);
+  1371→  if (cat === 'labour') {
+  1372→    const tbody = document.getElementById('rows-tracking');
+  1373→    if (tbody) renderTrackingRow(row);
+  1374→  }
+  1375→  recalcAll();
+  1376→}
+  1377→
+  1378→function renderRow(cat, row) {
+  1379→  const tbody = document.getElementById('rows-'+cat);
+  1380→  const tr = document.createElement('tr');
+  1381→  tr.id = 'tr-' + row.id;
+  1382→  tr.setAttribute('data-cat', cat);
+  1383→  tr.setAttribute('data-id', row.id);
+  1384→
+  1385→  const typeOpts = `
+  1386→    <option value="monthly"  ${row.type==='monthly' ?'selected':''}>Monthly</option>
+  1387→    <option value="onetime"  ${row.type==='onetime' ?'selected':''}>One-time</option>
+  1388→    <option value="perunit"  ${row.type==='perunit' ?'selected':''}>Per-unit</option>
+  1389→  `;
+  1390→
+  1391→  if (cat === 'labour') {
+  1392→    const basisOpts = `
+  1393→      <option value="monthly" ${row.rateBasis==='monthly'?'selected':''}>Monthly salary</option>
+  1394→      <option value="hourly"  ${row.rateBasis==='hourly' ?'selected':''}>Hourly rate</option>
+  1395→    `;
+  1396→    tr.innerHTML = `
+  1397→      <td><input type="text" value="${esc(row.desc)}" placeholder="Role / description"
+  1398→        oninput="updateRowField('${cat}','${row.id}','desc',this.value); syncTrackingLabel('${row.id}',this.value)"></td>
+  1399→      <td><select onchange="updateRowField('${cat}','${row.id}','rateBasis',this.value)">${basisOpts}</select></td>
+  1400→      <td><input type="number" value="${row.rate}" min="0" step="0.01"
+  1401→        style="text-align:right"
+  1402→        oninput="updateRowField('${cat}','${row.id}','rate',parseFloat(this.value)||0)"></td>
+  1403→      <td><input type="number" value="${row.plannedHours}" min="0" step="1"
+  1404→        style="text-align:right"
+  1405→        oninput="updateRowField('${cat}','${row.id}','plannedHours',parseFloat(this.value)||0)"></td>
+  1406→      <td><input type="number" value="${row.qty}" min="0.01" step="0.01"
+  1407→        style="text-align:right"
+  1408→        oninput="updateRowField('${cat}','${row.id}','qty',parseFloat(this.value)||1)"></td>
+  1409→      <td><select onchange="updateRowField('${cat}','${row.id}','type',this.value)">${typeOpts}</select></td>
+  1410→      <td class="r row-total" id="rtot-${row.id}">—</td>
+  1411→      <td><input type="text" value="${esc(row.notes)}" placeholder="Optional"
+  1412→        oninput="updateRowField('${cat}','${row.id}','notes',this.value)"></td>
+  1413→      <td style="text-align:center">
+  1414→        <button class="btn btn-xs btn-danger" onclick="deleteRow('${cat}','${row.id}')" title="Remove">✕</button>
+  1415→      </td>
+  1416→    `;
+  1417→  } else {
+  1418→    tr.innerHTML = `
+  1419→      <td><input type="text" value="${esc(row.desc)}" placeholder="Description"
+  1420→        oninput="updateRowField('${cat}','${row.id}','desc',this.value)"></td>
+  1421→      <td><input type="number" value="${row.rate}" min="0" step="0.01"
+  1422→        style="text-align:right"
+  1423→        oninput="updateRowField('${cat}','${row.id}','rate',parseFloat(this.value)||0)"></td>
+  1424→      <td><input type="number" value="${row.qty}" min="0.01" step="0.01"
+  1425→        style="text-align:right"
+  1426→        oninput="updateRowField('${cat}','${row.id}','qty',parseFloat(this.value)||1)"></td>
+  1427→      <td><select onchange="updateRowField('${cat}','${row.id}','type',this.value)">${typeOpts}</select></td>
+  1428→      <td class="r row-total" id="rtot-${row.id}">—</td>
+  1429→      <td><input type="text" value="${esc(row.notes)}" placeholder="Optional"
+  1430→        oninput="updateRowField('${cat}','${row.id}','notes',this.value)"></td>
+  1431→      <td style="text-align:center">
+  1432→        <button class="btn btn-xs btn-danger" onclick="deleteRow('${cat}','${row.id}')" title="Remove">✕</button>
+  1433→      </td>
+  1434→    `;
+  1435→  }
+  1436→  tbody.appendChild(tr);
+  1437→}
+  1438→
+  1439→function updateRowField(cat, id, field, val) {
+  1440→  const row = rows[cat].find(r => r.id === id);
+  1441→  if (row) { row[field] = val; recalcAll(); }
+  1442→}
+  1443→
+  1444→function deleteRow(cat, id) {
+  1445→  rows[cat] = rows[cat].filter(r => r.id !== id);
+  1446→  const tr = document.getElementById('tr-'+id);
+  1447→  if (tr) tr.remove();
+  1448→  if (cat === 'labour') {
+  1449→    delete actualHours[id];
+  1450→    const trackTr = document.getElementById('track-tr-'+id);
+  1451→    if (trackTr) trackTr.remove();
+  1452→  }
+  1453→  recalcAll();
+  1454→}
+  1455→
+  1456→// ── TIME TRACKING TABLE RENDERING ──────────────────────────────────
+  1457→function renderTrackingHeader() {
+  1458→  const headerRow = document.getElementById('tracking-header-row');
+  1459→  if (!headerRow) return;
+  1460→  const duration = getNum('f-duration', 12);
+  1461→  const monthsToShow = Math.min(Math.max(duration, 1), MAX_TRACK_MONTHS);
+  1462→  // Rebuild header: Resource | Plan hrs/mo | Mo1 | Mo2 | ... | Total actual | Variance
+  1463→  let html = `<th style="width:180px;position:sticky;left:0;background:var(--surface);z-index:2">Resource</th>
+  1464→    <th style="width:90px">Plan hrs/mo</th>`;
+  1465→  for (let m = 1; m <= monthsToShow; m++) {
+  1466→    html += `<th style="width:64px;text-align:center">M${m}</th>`;
+  1467→  }
+  1468→  html += `<th style="width:90px;text-align:right">Total actual</th>
+  1469→    <th style="width:90px;text-align:right">Plan to date</th>
+  1470→    <th style="width:80px;text-align:center">Variance</th>`;
+  1471→  headerRow.innerHTML = html;
+  1472→}
+  1473→
+  1474→function renderTrackingRow(row) {
+  1475→  const tbody = document.getElementById('rows-tracking');
+  1476→  if (!tbody) return;
+  1477→  if (!actualHours[row.id]) actualHours[row.id] = {};
+  1478→
+  1479→  const duration = getNum('f-duration', 12);
+  1480→  const monthsToShow = Math.min(Math.max(duration, 1), MAX_TRACK_MONTHS);
+  1481→
+  1482→  const tr = document.createElement('tr');
+  1483→  tr.id = 'track-tr-' + row.id;
+  1484→  tr.setAttribute('data-id', row.id);
+  1485→
+  1486→  let html = `<td style="position:sticky;left:0;background:var(--surface);font-weight:600" id="track-label-${row.id}">${esc(row.desc) || '(unnamed role)'}</td>
+  1487→    <td class="r" id="track-plan-${row.id}" style="color:var(--ink3)">—</td>`;
+  1488→
+  1489→  for (let m = 1; m <= monthsToShow; m++) {
+  1490→    const val = actualHours[row.id][m] !== undefined ? actualHours[row.id][m] : '';
+  1491→    html += `<td><input type="number" min="0" step="1" value="${val}" placeholder="—"
+  1492→      style="text-align:center;width:56px"
+  1493→      oninput="updateActualHours('${row.id}',${m},this.value)"></td>`;
+  1494→  }
+  1495→
+  1496→  html += `<td class="r" id="track-total-${row.id}" style="font-weight:700">—</td>
+  1497→    <td class="r" id="track-todate-${row.id}" style="color:var(--ink3)">—</td>
+  1498→    <td style="text-align:center" id="track-status-${row.id}">—</td>`;
+  1499→
+  1500→  tr.innerHTML = html;
+  1501→  tbody.appendChild(tr);
+  1502→}
+  1503→
+  1504→function rebuildTrackingTable() {
+  1505→  renderTrackingHeader();
+  1506→  const tbody = document.getElementById('rows-tracking');
+  1507→  if (!tbody) return;
+  1508→  tbody.innerHTML = '';
+  1509→  rows.labour.forEach(row => renderTrackingRow(row));
+  1510→}
+  1511→
+  1512→function updateActualHours(resourceId, month, val) {
+  1513→  if (!actualHours[resourceId]) actualHours[resourceId] = {};
+  1514→  const num = parseFloat(val);
+  1515→  if (val === '' || isNaN(num)) {
+  1516→    delete actualHours[resourceId][month];
+  1517→  } else {
+  1518→    actualHours[resourceId][month] = num;
+  1519→  }
+  1520→  recalcAll();
+  1521→}
+  1522→
+  1523→function syncTrackingLabel(resourceId, name) {
+  1524→  const el = document.getElementById('track-label-'+resourceId);
+  1525→  if (el) el.textContent = name || '(unnamed role)';
+  1526→}
+  1527→
+  1528→function esc(s) {
+  1529→  return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  1530→}
+  1531→
+  1532→// ═══════════════════════════════════════════════════════════════════
+  1533→// CORE CALCULATIONS
+  1534→// ═══════════════════════════════════════════════════════════════════
+  1535→function getNum(id, def = 0) {
+  1536→  const el = document.getElementById(id);
+  1537→  if (!el) return def;
+  1538→  const v = parseFloat(el.value);
+  1539→  return isNaN(v) ? def : v;
+  1540→}
+  1541→function getStr(id, def = '') {
+  1542→  const el = document.getElementById(id);
+  1543→  return el ? (el.value || def) : def;
+  1544→}
+  1545→
+  1546→function computeRowTotal(row, duration) {
+  1547→  const rate = parseFloat(row.rate) || 0;
+  1548→  const qty  = parseFloat(row.qty)  || 1;
+  1549→  if (row.type === 'monthly') {
+  1550→    const monthlyCost = getRowMonthlyCost(row);
+  1551→    return monthlyCost * qty * duration;
+  1552→  }
+  1553→  if (row.type === 'onetime')  return rate * qty;
+  1554→  if (row.type === 'perunit')  return 0; // counted separately
+  1555→  return 0;
+  1556→}
+  1557→
+  1558→// Resolves a labour row's effective monthly cost regardless of rate basis.
+  1559→// Monthly salary basis: rate IS the monthly cost.
+  1560→// Hourly basis: rate × plannedHours/month = monthly cost.
+  1561→// Non-labour categories always use rate directly (rateBasis is unused).
+  1562→function getRowMonthlyCost(row) {
+  1563→  const rate = parseFloat(row.rate) || 0;
+  1564→  if (row.rateBasis === 'hourly') {
+  1565→    const hrs = parseFloat(row.plannedHours) || 0;
+  1566→    return rate * hrs;
+  1567→  }
+  1568→  return rate; // monthly basis or non-labour category
+  1569→}
+  1570→
+  1571→// ═══════════════════════════════════════════════════════════════════
+  1572→// EARNED VALUE MANAGEMENT (EVM) ENGINE
+  1573→// ═══════════════════════════════════════════════════════════════════
+  1574→// PV (Planned Value)  = budgeted cost of work that SHOULD be done by current month
+  1575→// EV (Earned Value)    = budgeted cost of work ACTUALLY done by current month (here: actual hours × planned rate)
+  1576→// AC (Actual Cost)     = real cost incurred for hours actually worked (actual hours × rate)
+  1577→// CV = EV − AC   (negative = over budget)
+  1578→// SV = EV − PV   (negative = behind schedule)
+  1579→// CPI = EV / AC  (>1 = under budget, <1 = over budget)
+  1580→// SPI = EV / PV  (>1 = ahead of schedule, <1 = behind schedule)
+  1581→// EAC = AC + (BAC − EV) / CPI   (forecast total cost at completion)
+  1582→function computeEVM(d) {
+  1583→  const duration     = d.duration;
+  1584→  const currentMonth = Math.min(getNum('f-currentMonth', 1), duration);
+  1585→  const stdHours      = getNum('f-stdHours', 160);
+  1586→
+  1587→  let PV = 0, EV = 0, AC = 0;
+  1588→  let BAC = 0; // Budget at completion (total planned labour cost across full duration)
+  1589→
+  1590→  const perResource = [];
+  1591→
+  1592→  rows.labour.forEach(row => {
+  1593→    const rate = parseFloat(row.rate) || 0;
+  1594→    const qty  = parseFloat(row.qty)  || 1;
+  1595→    const plannedHoursPerMonth = row.rateBasis === 'hourly'
+  1596→      ? (parseFloat(row.plannedHours) || 0)
+  1597→      : stdHours; // for monthly-salary resources, assume standard hours as the "planned" baseline
+  1598→    const monthlyCost = getRowMonthlyCost(row); // full planned cost per month for this resource
+  1599→    const impliedHourlyRate = plannedHoursPerMonth > 0 ? monthlyCost / plannedHoursPerMonth : 0;
+  1600→
+  1601→    let resPV = 0, resEV = 0, resAC = 0, planHoursToDate = 0, actualHoursToDate = 0;
+  1602→
+  1603→    for (let m = 1; m <= duration; m++) {
+  1604→      const plannedHrsThisMonth = plannedHoursPerMonth;
+  1605→      const isPast = m <= currentMonth;
+  1606→
+  1607→      // Planned value accrues every month up to current month regardless of actuals
+  1608→      if (isPast) {
+  1609→        resPV += monthlyCost * qty;
+  1610→        planHoursToDate += plannedHrsThisMonth * qty;
+  1611→      }
+  1612→
+  1613→      if (isPast) {
+  1614→        const actualHrs = actualHours[row.id] && actualHours[row.id][m] !== undefined
+  1615→          ? actualHours[row.id][m]
+  1616→          : plannedHrsThisMonth; // unlogged past months assumed on-plan
+  1617→        actualHoursToDate += actualHrs * qty;
+  1618→
+  1619→        // % of this month's planned work actually completed. Hours worked is our best
+  1620→        // available proxy for progress: working fewer hours than planned means less of
+  1621→        // the month's scope got done (schedule slip); working more hours doesn't earn
+  1622→        // MORE value than was scoped — it just means it cost more to deliver the same
+  1623→        // scope (cost overrun). Capped at 100% — you can't out-earn the month's scope.
+  1624→        const pctComplete = plannedHrsThisMonth > 0 ? Math.min(actualHrs / plannedHrsThisMonth, 1.0) : 1.0;
+  1625→        resEV += monthlyCost * qty * pctComplete;
+  1626→
+  1627→        // Actual cost = actual hours actually worked × implied hourly rate — this is
+  1628→        // what really varies when someone works more or fewer hours than planned,
+  1629→        // and is what diverges from EV to produce a genuine CPI signal.
+  1630→        resAC += impliedHourlyRate * actualHrs * qty;
+  1631→      }
+  1632→    }
+  1633→
+  1634→    BAC += monthlyCost * qty * duration;
+  1635→
+  1636→    PV += resPV;
+  1637→    EV += resEV;
+  1638→    AC += resAC;
+  1639→
+  1640→    const variance = resEV - resAC;
+  1641→    const status = variance >= 0 ? 'good' : (variance >= -resPV * 0.1 ? 'warn' : 'bad');
+  1642→
+  1643→    perResource.push({
+  1644→      id: row.id,
+  1645→      desc: row.desc || '(unnamed role)',
+  1646→      planHoursToDate, actualHoursToDate,
+  1647→      plannedCost: resPV, actualCost: resAC, earnedValue: resEV,
+  1648→      variance, status
+  1649→    });
+  1650→
+  1651→    // Update tracking page live cells
+  1652→    const planEl   = document.getElementById('track-plan-'+row.id);
+  1653→    const totalEl   = document.getElementById('track-total-'+row.id);
+  1654→    const todateEl  = document.getElementById('track-todate-'+row.id);
+  1655→    const statusEl  = document.getElementById('track-status-'+row.id);
+  1656→    if (planEl)  planEl.textContent = plannedHoursPerMonth + ' hrs';
+  1657→    if (totalEl) totalEl.textContent = Math.round(actualHoursToDate) + ' hrs';
+  1658→    if (todateEl) todateEl.textContent = Math.round(planHoursToDate) + ' hrs';
+  1659→    if (statusEl) {
+  1660→      const diff = actualHoursToDate - planHoursToDate;
+  1661→      const pct = planHoursToDate > 0 ? Math.round(diff/planHoursToDate*100) : 0;
+  1662→      statusEl.innerHTML = diff === 0 ? '<span style="color:var(--ink3)">On plan</span>'
+  1663→        : diff > 0 ? `<span style="color:var(--red)">+${pct}%</span>`
+  1664→        : `<span style="color:var(--green)">${pct}%</span>`;
+  1665→    }
+  1666→  });
+  1667→
+  1668→  const CV  = EV - AC;
+  1669→  const SV  = EV - PV;
+  1670→  const CPI = AC > 0 ? EV / AC : 1;
+  1671→  const SPI = PV > 0 ? EV / PV : 1;
+  1672→  const EAC = CPI > 0 ? AC + (BAC - EV) / CPI : BAC;
+  1673→  const ETC = EAC - AC; // estimate to complete
+  1674→  const VAC = BAC - EAC; // variance at completion
+  1675→
+  1676→  // Non-labour costs (assumed to track on-plan since we don't track hours for them)
+  1677→  const nonLabourTotal = CATS.filter(cat => cat !== 'labour').reduce((s, cat) => s + d.catTotals[cat].total, 0);
+  1678→  const projectedTotalCost = EAC + nonLabourTotal;
+  1679→  const originalTotalCost  = BAC + nonLabourTotal;
+  1680→
+  1681→  return {
+  1682→    currentMonth, duration, stdHours,
+  1683→    PV, EV, AC, BAC, EAC, ETC, VAC, CV, SV, CPI, SPI,
+  1684→    perResource, nonLabourTotal, projectedTotalCost, originalTotalCost
+  1685→  };
+  1686→}
+  1687→
+  1688→function renderEVMPage(d, c) {
+  1689→  const evm = computeEVM(d);
+  1690→
+  1691→  setText('evm-pv', fmtFull(c, evm.PV));
+  1692→  setText('evm-ev', fmtFull(c, evm.EV));
+  1693→  setText('evm-ac', fmtFull(c, evm.AC));
+  1694→  setText('evm-eac', fmt(c, evm.projectedTotalCost));
+  1695→  setText('evm-eac-sub', 'vs. original plan: ' + fmtFull(c, evm.originalTotalCost));
+  1696→
+  1697→  setText('evm-cv', (evm.CV>=0?'+':'') + fmtFull(c, evm.CV));
+  1698→  setText('evm-sv', (evm.SV>=0?'+':'') + fmtFull(c, evm.SV));
+  1699→  setText('evm-cpi', evm.CPI.toFixed(2));
+  1700→  setText('evm-spi', evm.SPI.toFixed(2));
+  1701→  setText('evm-cv-sub', evm.CV >= 0 ? 'Under budget' : 'Over budget');
+  1702→  setText('evm-sv-sub', evm.SV >= 0 ? 'Ahead of schedule' : 'Behind schedule');
+  1703→  setText('evm-cpi-sub', evm.CPI >= 1 ? 'Efficient spending' : 'Inefficient spending');
+  1704→  setText('evm-spi-sub', evm.SPI >= 1 ? 'Ahead of plan' : 'Falling behind');
+  1705→
+  1706→  setMetricCard('mc-cv',  evm.CV  >= 0 ? 'green' : 'red');
+  1707→  setMetricCard('mc-sv',  evm.SV  >= 0 ? 'green' : 'red');
+  1708→  setMetricCard('mc-cpi', evm.CPI >= 1 ? 'green' : evm.CPI >= 0.9 ? 'amber' : 'red');
+  1709→  setMetricCard('mc-spi', evm.SPI >= 1 ? 'green' : evm.SPI >= 0.9 ? 'amber' : 'red');
+  1710→  setMetricCard('mc-pv', 'blue');
+  1711→  setMetricCard('mc-ev', 'teal');
+  1712→  setMetricCard('mc-ac', evm.AC <= evm.PV ? 'green' : 'amber');
+  1713→  setMetricCard('mc-eac', evm.projectedTotalCost <= evm.originalTotalCost ? 'green' : 'red');
+  1714→
+  1715→  const statusEl = document.getElementById('evm-status-box');
+  1716→  if (statusEl) {
+  1717→    const budgetOk = evm.CPI >= 1;
+  1718→    const scheduleOk = evm.SPI >= 1;
+  1719→    let cls, icon, title, desc;
+  1720→    if (budgetOk && scheduleOk) {
+  1721→      cls='go'; icon='✅'; title='On track — under budget and ahead of schedule';
+  1722→      desc = `At month ${evm.currentMonth} of ${evm.duration}, the project is performing well. CPI of ${evm.CPI.toFixed(2)} means every ${c}1 spent is delivering ${c}${evm.CPI.toFixed(2)} of planned value. Forecast final cost: ${fmtFull(c,evm.projectedTotalCost)} vs. original budget of ${fmtFull(c,evm.originalTotalCost)}.`;
+  1723→    } else if (!budgetOk && !scheduleOk) {
+  1724→      cls='nogo'; icon='❌'; title='Critical — over budget and behind schedule';
+  1725→      desc = `At month ${evm.currentMonth} of ${evm.duration}, the project is both overspending and falling behind. At this rate, forecast final cost is ${fmtFull(c,evm.projectedTotalCost)} — ${fmtFull(c,Math.abs(evm.VAC))} ${evm.VAC<0?'over':'under'} the original ${fmtFull(c,evm.originalTotalCost)} budget. Immediate corrective action recommended.`;
+  1726→    } else if (!budgetOk) {
+  1727→      cls='caution'; icon='⚠️'; title='Over budget — but on or ahead of schedule';
+  1728→      desc = `Work is progressing on schedule (SPI ${evm.SPI.toFixed(2)}) but costing more than planned (CPI ${evm.CPI.toFixed(2)}). Forecast final cost: ${fmtFull(c,evm.projectedTotalCost)}, which is ${fmtFull(c,Math.abs(evm.VAC))} over the original budget.`;
+  1729→    } else {
+  1730→      cls='caution'; icon='⚠️'; title='Behind schedule — but within budget';
+  1731→      desc = `Spending is under control (CPI ${evm.CPI.toFixed(2)}) but progress is slower than planned (SPI ${evm.SPI.toFixed(2)}). Consider whether resourcing needs to increase to hit the ${evm.duration}-month target.`;
+  1732→    }
+  1733→    statusEl.innerHTML = `<div class="verdict-box ${cls}">
+  1734→      <div class="vb-head"><div class="vb-icon">${icon}</div><div class="vb-title">${title}</div></div>
+  1735→      <div class="vb-desc">${desc}</div>
+  1736→    </div>`;
+  1737→  }
+  1738→
+  1739→  renderEVMQuadrant(evm, c);
+  1740→  renderEVMTrend(d, evm, c);
+  1741→
+  1742→  const tbody = document.getElementById('evm-resource-tbody');
+  1743→  if (tbody) {
+  1744→    if (evm.perResource.length === 0) {
+  1745→      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--ink3);padding:20px">No labour resources yet — add team members in Cost Inputs</td></tr>`;
+  1746→    } else {
+  1747→      tbody.innerHTML = evm.perResource.map(r => {
+  1748→        const statusLabel = r.status === 'good' ? 'On/under budget' : r.status === 'warn' ? 'Slightly over' : 'Significantly over';
+  1749→        const statusColor = r.status === 'good' ? 'go' : r.status === 'warn' ? 'caution' : 'nogo';
+  1750→        return `<tr>
+  1751→          <td style="font-weight:600">${esc(r.desc)}</td>
+  1752→          <td class="r">${Math.round(r.planHoursToDate)} hrs</td>
+  1753→          <td class="r">${Math.round(r.actualHoursToDate)} hrs</td>
+  1754→          <td class="r">${fmtFull(c, r.plannedCost)}</td>
+  1755→          <td class="r">${fmtFull(c, r.actualCost)}</td>
+  1756→          <td class="r" style="color:${r.variance>=0?'var(--green)':'var(--red)'};font-weight:700">${r.variance>=0?'+':''}${fmtFull(c, r.variance)}</td>
+  1757→          <td><span class="verdict-pill vp-${statusColor}">${statusLabel}</span></td>
+  1758→        </tr>`;
+  1759→      }).join('');
+  1760→    }
+  1761→  }
+  1762→
+  1763→  renderEVMRecommendations(evm, d, c);
+  1764→  return evm;
+  1765→}
+  1766→
+  1767→function renderEVMQuadrant(evm, c) {
+  1768→  const el = document.getElementById('evm-quadrant');
+  1769→  if (!el) return;
+  1770→
+  1771→  const cvPct = evm.PV > 0 ? Math.max(-50, Math.min(50, (evm.CV / evm.PV) * 100)) : 0;
+  1772→  const svPct = evm.PV > 0 ? Math.max(-50, Math.min(50, (evm.SV / evm.PV) * 100)) : 0;
+  1773→
+  1774→  const size = 320;
+  1775→  const cx = size/2, cy = size/2;
+  1776→  const px = cx + (cvPct/50) * (size/2 - 30);
+  1777→  const py = cy - (svPct/50) * (size/2 - 30);
+  1778→
+  1779→  const dotColor = (cvPct>=0 && svPct>=0) ? '#16a34a' : (cvPct<0 && svPct<0) ? '#dc2626' : '#d97706';
+  1780→
+  1781→  el.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  1782→    <rect x="0" y="0" width="${size/2}" height="${size/2}" fill="#fef3c7" opacity="0.4"/>
+  1783→    <rect x="${size/2}" y="0" width="${size/2}" height="${size/2}" fill="#dcfce7" opacity="0.4"/>
+  1784→    <rect x="0" y="${size/2}" width="${size/2}" height="${size/2}" fill="#fee2e2" opacity="0.4"/>
+  1785→    <rect x="${size/2}" y="${size/2}" width="${size/2}" height="${size/2}" fill="#fef3c7" opacity="0.4"/>
+  1786→    <line x1="0" y1="${cy}" x2="${size}" y2="${cy}" stroke="#c5d0da" stroke-width="1.5"/>
+  1787→    <line x1="${cx}" y1="0" x2="${cx}" y2="${size}" stroke="#c5d0da" stroke-width="1.5"/>
+  1788→    <text x="${size-6}" y="${cy-8}" font-size="10" fill="#7a8fa0" text-anchor="end">Under budget →</text>
+  1789→    <text x="6" y="${cy-8}" font-size="10" fill="#7a8fa0" text-anchor="start">← Over budget</text>
+  1790→    <text x="${cx+6}" y="14" font-size="10" fill="#7a8fa0">Ahead of schedule ↑</text>
+  1791→    <text x="${cx+6}" y="${size-8}" font-size="10" fill="#7a8fa0">↓ Behind schedule</text>
+  1792→    <circle cx="${px}" cy="${py}" r="10" fill="${dotColor}" opacity="0.25"/>
+  1793→    <circle cx="${px}" cy="${py}" r="6" fill="${dotColor}" stroke="#fff" stroke-width="2"/>
+  1794→    <text x="${px}" y="${py-16}" font-size="11" font-weight="700" fill="${dotColor}" text-anchor="middle">You are here</text>
+  1795→  </svg>`;
+  1796→}
+  1797→
+  1798→function renderEVMTrend(d, evm, c) {
+  1799→  const el = document.getElementById('evm-trend-chart');
+  1800→  if (!el) return;
+  1801→
+  1802→  const duration = evm.duration;
+  1803→  const stdHours = evm.stdHours;
+  1804→
+  1805→  let cumPlanned = 0, cumActual = 0;
+  1806→  const points = [];
+  1807→  for (let m = 1; m <= duration; m++) {
+  1808→    let monthPlan = 0, monthActual = 0;
+  1809→    rows.labour.forEach(row => {
+  1810→      const qty = parseFloat(row.qty) || 1;
+  1811→      const monthlyCost = getRowMonthlyCost(row);
+  1812→      const plannedHrs = row.rateBasis === 'hourly' ? (parseFloat(row.plannedHours)||0) : stdHours;
+  1813→      const impliedRate = plannedHrs > 0 ? monthlyCost / plannedHrs : 0;
+  1814→      monthPlan += monthlyCost * qty;
+  1815→      if (m <= evm.currentMonth) {
+  1816→        const actualHrs = actualHours[row.id] && actualHours[row.id][m] !== undefined
+  1817→          ? actualHours[row.id][m] : plannedHrs;
+  1818→        monthActual += impliedRate * actualHrs * qty;
+  1819→      }
+  1820→    });
+  1821→    cumPlanned += monthPlan;
+  1822→    if (m <= evm.currentMonth) cumActual += monthActual;
+  1823→    points.push({ m, planned: cumPlanned, actual: m <= evm.currentMonth ? cumActual : null });
+  1824→  }
+  1825→
+  1826→  const maxVal = Math.max(...points.map(p => p.planned), cumActual, 1);
+  1827→  const w = 680, h = 220, padL = 50, padB = 24, padT = 10, padR = 10;
+  1828→  const plotW = w - padL - padR, plotH = h - padT - padB;
+  1829→
+  1830→  const xFor = m => padL + (m-1)/(duration-1||1) * plotW;
+  1831→  const yFor = v => padT + plotH - (v/maxVal) * plotH;
+  1832→
+  1833→  const plannedPath = points.map((p,i) => `${i===0?'M':'L'} ${xFor(p.m)} ${yFor(p.planned)}`).join(' ');
+  1834→  const actualPoints = points.filter(p => p.actual !== null);
+  1835→  const actualPath = actualPoints.map((p,i) => `${i===0?'M':'L'} ${xFor(p.m)} ${yFor(p.actual)}`).join(' ');
+  1836→
+  1837→  const currentX = xFor(evm.currentMonth);
+  1838→
+  1839→  el.innerHTML = `<svg width="100%" viewBox="0 0 ${w} ${h}" style="overflow:visible">
+  1840→    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h-padB}" stroke="#dde4eb"/>
+  1841→    <line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="#dde4eb"/>
+  1842→    <text x="${padL-6}" y="${padT+4}" font-size="10" fill="#7a8fa0" text-anchor="end">${fmt(c,maxVal)}</text>
+  1843→    <text x="${padL-6}" y="${h-padB}" font-size="10" fill="#7a8fa0" text-anchor="end">0</text>
+  1844→    <line x1="${currentX}" y1="${padT}" x2="${currentX}" y2="${h-padB}" stroke="#1a6cf0" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+  1845→    <text x="${currentX}" y="${padT-2}" font-size="10" fill="#1a6cf0" text-anchor="middle">Now (M${evm.currentMonth})</text>
+  1846→    <path d="${plannedPath}" fill="none" stroke="#7a8fa0" stroke-width="2" stroke-dasharray="5,4"/>
+  1847→    <path d="${actualPath}" fill="none" stroke="#1a6cf0" stroke-width="2.5"/>
+  1848→    ${actualPoints.length ? `<circle cx="${xFor(actualPoints[actualPoints.length-1].m)}" cy="${yFor(actualPoints[actualPoints.length-1].actual)}" r="4" fill="#1a6cf0"/>` : ''}
+  1849→    <text x="${w-padR}" y="${padT+12}" font-size="10" fill="#7a8fa0" text-anchor="end">M${duration}</text>
+  1850→    <text x="${padL}" y="${h-4}" font-size="10" fill="#7a8fa0">M1</text>
+  1851→  </svg>
+  1852→  <div style="display:flex;gap:18px;font-size:12px;margin-top:6px">
+  1853→    <span style="color:#7a8fa0">– – Planned cumulative cost</span>
+  1854→    <span style="color:#1a6cf0">— Actual cumulative cost (to date)</span>
+  1855→  </div>`;
+  1856→}
+  1857→
+  1858→function renderEVMRecommendations(evm, d, c) {
+  1859→  const el = document.getElementById('evm-recommendations');
+  1860→  if (!el) return;
+  1861→
+  1862→  const recs = [];
+  1863→
+  1864→  if (evm.CPI < 0.85) {
+  1865→    recs.push({ severity: 'high', icon: '🔴', title: 'Significant cost overrun detected',
+  1866→      text: `CPI of ${evm.CPI.toFixed(2)} means you're getting only ${c}${evm.CPI.toFixed(2)} of value per ${c}1 spent. Review the per-resource variance table below to identify which roles are most over budget, and consider renegotiating scope or rates for those resources.` });
+  1867→  } else if (evm.CPI < 1) {
+  1868→    recs.push({ severity: 'med', icon: '🟡', title: 'Mild cost overrun — monitor closely',
+  1869→      text: `CPI of ${evm.CPI.toFixed(2)} is slightly under 1.0. This is recoverable but worth flagging to the team — small overruns compound over a long project.` });
+  1870→  } else if (evm.CPI >= 1.1) {
+  1871→    recs.push({ severity: 'good', icon: '🟢', title: 'Cost efficiency is strong',
+  1872→      text: `CPI of ${evm.CPI.toFixed(2)} suggests resources may be under-utilised relative to budget, or work is genuinely more efficient than planned. Consider whether budget could be reallocated to accelerate other workstreams.` });
+  1873→  }
+  1874→
+  1875→  if (evm.SPI < 0.85) {
+  1876→    recs.push({ severity: 'high', icon: '🔴', title: 'Project is falling significantly behind schedule',
+  1877→      text: `SPI of ${evm.SPI.toFixed(2)} means progress is well behind plan. Consider adding short-term contractor capacity to the most delayed roles, descoping non-critical features, or extending the deadline rather than compressing future months further.` });
+  1878→  } else if (evm.SPI < 1) {
+  1879→    recs.push({ severity: 'med', icon: '🟡', title: 'Schedule slipping slightly',
+  1880→      text: `SPI of ${evm.SPI.toFixed(2)} indicates a minor schedule slip. A focused sprint or temporary reallocation of hours from lower-priority categories could close this gap before it compounds.` });
+  1881→  }
+  1882→
+  1883→  if (evm.VAC < 0) {
+  1884→    const overrunPct = evm.originalTotalCost > 0 ? Math.abs(evm.VAC / evm.originalTotalCost * 100) : 0;
+  1885→    recs.push({ severity: overrunPct > 15 ? 'high' : 'med', icon: overrunPct > 15 ? '🔴' : '🟡',
+  1886→      title: `Forecast final cost is ${fmtFull(c, Math.abs(evm.VAC))} over original budget (${overrunPct.toFixed(0)}%)`,
+  1887→      text: `At the current burn rate and efficiency, total project cost is trending to ${fmtFull(c, evm.projectedTotalCost)} against an original budget of ${fmtFull(c, evm.originalTotalCost)}. ${overrunPct > 15 ? 'This exceeds typical contingency buffers — escalate to stakeholders now.' : 'This is within a typical 10-15% contingency buffer, but should be tracked weekly.'}` });
+  1888→  }
+  1889→
+  1890→  if (evm.perResource.length > 0) {
+  1891→    const worst = evm.perResource.reduce((a,b) => a.variance < b.variance ? a : b);
+  1892→    if (worst.variance < -100) {
+  1893→      recs.push({ severity: 'med', icon: '👤', title: `"${worst.desc}" is the largest driver of cost variance`,
+  1894→        text: `This resource has a variance of ${fmtFull(c, worst.variance)} (actual cost ${fmtFull(c, worst.actualCost)} vs. planned ${fmtFull(c, worst.plannedCost)}). Check whether this reflects scope creep, underestimated complexity, or a rate mismatch when this resource was budgeted.` });
+  1895→    }
+  1896→  }
+  1897→
+  1898→  if (d.totalProject > 0) {
+  1899→    const llmShare = d.catTotals.llm.total / d.totalProject;
+  1900→    if (llmShare > 0.15) {
+  1901→      recs.push({ severity: 'med', icon: '🤖', title: 'LLM / AI costs are a significant share of total spend',
+  1902→        text: `LLM costs represent ${Math.round(llmShare*100)}% of total project cost. Consider prompt optimisation, caching repeated queries, or a cheaper model tier for non-critical paths to reduce this without sacrificing the core feature.` });
+  1903→    }
+  1904→  }
+  1905→
+  1906→  if (recs.length === 0) {
+  1907→    recs.push({ severity: 'good', icon: '✅', title: 'No corrective action needed',
+  1908→      text: 'Cost and schedule performance are both on track. Continue current resourcing and re-check this page after logging next month\'s actual hours.' });
+  1909→  }
+  1910→
+  1911→  const sevBg    = { high: 'var(--red-lt)', med: 'var(--amber-lt)', good: 'var(--green-lt)' };
+  1912→  const sevText  = { high: 'var(--red)', med: '#92400e', good: 'var(--green)' };
+  1913→
+  1914→  el.innerHTML = recs.map(r => `<div style="display:flex;gap:12px;padding:14px;border-radius:var(--r8);background:${sevBg[r.severity]};margin-bottom:10px">
+  1915→    <div style="font-size:20px;flex-shrink:0">${r.icon}</div>
+  1916→    <div>
+  1917→      <div style="font-weight:700;font-size:13px;color:${sevText[r.severity]};margin-bottom:4px">${r.title}</div>
+  1918→      <div style="font-size:12px;color:var(--ink2);line-height:1.6">${r.text}</div>
+  1919→    </div>
+  1920→  </div>`).join('');
+  1921→}
+  1922→
+  1923→function computeCatTotals(duration) {
+  1924→  const totals = {};
+  1925→  CATS.forEach(cat => {
+  1926→    totals[cat] = { monthly: 0, onetime: 0, perunit: 0, total: 0 };
+  1927→    rows[cat].forEach(row => {
+  1928→      const rate = parseFloat(row.rate) || 0;
+  1929→      const qty  = parseFloat(row.qty)  || 1;
+  1930→      if (row.type === 'monthly') {
+  1931→        const monthlyCost = getRowMonthlyCost(row);
+  1932→        totals[cat].monthly += monthlyCost * qty;
+  1933→        totals[cat].total   += monthlyCost * qty * duration;
+  1934→      } else if (row.type === 'onetime') {
+  1935→        totals[cat].onetime += rate * qty;
+  1936→        totals[cat].total   += rate * qty;
+  1937→      } else if (row.type === 'perunit') {
+  1938→        totals[cat].perunit += rate * qty;
+  1939→      }
+  1940→    });
+  1941→  });
+  1942→  return totals;
+  1943→}
+  1944→
+  1945→function computeAll() {
+  1946→  const duration   = getNum('f-duration', 12);
+  1947→  const targetVol  = getNum('f-targetVol', 500);
+  1948→  const salesPeriod= getNum('f-salesPeriod', 12);
+  1949→  const currency   = getStr('f-currency', '$');
+  1950→  const unitLabel  = getStr('f-unitLabel', 'Units');
+  1951→
+  1952→  const catTotals  = computeCatTotals(duration);
+  1953→
+  1954→  let totalMonthly = 0, totalOnetime = 0, totalPerunit = 0, totalProject = 0;
+  1955→  CATS.forEach(cat => {
+  1956→    totalMonthly  += catTotals[cat].monthly;
+  1957→    totalOnetime  += catTotals[cat].onetime;
+  1958→    totalPerunit  += catTotals[cat].perunit;
+  1959→    totalProject  += catTotals[cat].total;
+  1960→  });
+  1961→
+  1962→  // Pricing
+  1963→  const margin       = getNum('f-margin', 35) / 100;
+  1964→  const churn        = getNum('f-churn', 3) / 100;
+  1965→  const growth       = getNum('f-growth', 10) / 100;
+  1966→  const costBuffer   = getNum('f-costBuffer', 15) / 100;
+  1967→  const minROI       = getNum('f-minROI', 15);
+  1968→  const maxPayback   = getNum('f-maxPayback', 36);
+  1969→  const minMarginPct = getNum('f-minMargin', 20);
+  1970→
+  1971→  const cpuFixed     = targetVol > 0 ? totalProject / targetVol : 0;
+  1972→  const costPerUnit  = cpuFixed + totalPerunit;
+  1973→
+  1974→  const manualPrice  = getNum('f-sellingPrice', 0);
+  1975→  const derivedPrice = margin < 1 && costPerUnit > 0 ? costPerUnit / (1 - margin) : costPerUnit * 1.5;
+  1976→  const sellingPrice = (manualPrice > 0) ? manualPrice : derivedPrice;
+  1977→
+  1978→  const grossMarginPct = sellingPrice > 0 ? (sellingPrice - costPerUnit) / sellingPrice * 100 : 0;
+  1979→
+  1980→  // Break-even
+  1981→  const contribPerUnit  = sellingPrice - totalPerunit;
+  1982→  const beUnits         = contribPerUnit > 0 ? Math.ceil(totalProject / contribPerUnit) : Infinity;
+  1983→  const beRevenue       = beUnits < Infinity ? beUnits * sellingPrice : Infinity;
+  1984→
+  1985→  // Revenue & profit at target
+  1986→  const targetRevenue   = sellingPrice * targetVol;
+  1987→  const netProfit       = targetRevenue - totalProject - totalPerunit * targetVol;
+  1988→
+  1989→  // Monthly net profit (post-launch)
+  1990→  const monthlyRevenue  = sellingPrice * targetVol / Math.max(salesPeriod, 1);
+  1991→  const monthlyNet      = monthlyRevenue - totalMonthly;
+  1992→  const paybackMonths   = (monthlyNet > 0 && totalOnetime > 0)
+  1993→    ? Math.ceil(totalOnetime / monthlyNet)
+  1994→    : (monthlyNet <= 0 ? Infinity : 0);
+  1995→
+  1996→  const roi = totalProject > 0 ? (netProfit / totalProject) * 100 : 0;
+  1997→
+  1998→  // Churn impact
+  1999→  const churnedUnits = Math.round(targetVol * churn * 12);
+  2000→
+
+[showing lines 1-2000 of 3040; use offset=2001 with limit to continue reading]

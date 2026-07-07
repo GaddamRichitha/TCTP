@@ -1,0 +1,502 @@
+   600→   600→    </div>
+   601→   601→    <div class="nav-item" onclick="showPage('report')" id="nav-report">
+   602→   602→      <div class="nav-icon">📋</div> Report
+   603→   603→    </div>
+   604→   604→  </div>
+   605→   605→
+   606→   606→  <div class="sidebar-section">
+   607→   607→    <div class="sidebar-label">Cost categories</div>
+   608→   608→    <div class="cat-nav-item" onclick="showPage('costs'); scrollToCat('labour')">
+   609→   609→      <div class="cat-dot" style="background:var(--cat-labour)"></div>
+   610→   610→      Labour <span style="margin-left:auto;font-size:11px;color:var(--ink3)" id="snb-labour">—</span>
+   611→   611→    </div>
+   612→   612→    <div class="cat-nav-item" onclick="showPage('costs'); scrollToCat('infra')">
+   613→   613→      <div class="cat-dot" style="background:var(--cat-infra)"></div>
+   614→   614→      Cloud / Infra <span style="margin-left:auto;font-size:11px;color:var(--ink3)" id="snb-infra">—</span>
+   615→   615→    </div>
+   616→   616→    <div class="cat-nav-item" onclick="showPage('costs'); scrollToCat('apis')">
+   617→   617→      <div class="cat-dot" style="background:var(--cat-apis)"></div>
+   618→   618→      APIs / SaaS <span style="margin-left:auto;font-size:11px;color:var(--ink3)" id="snb-apis">—</span>
+   619→   619→    </div>
+   620→   620→    <div class="cat-nav-item" onclick="showPage('costs'); scrollToCat('llm')">
+   621→   621→      <div class="cat-dot" style="background:var(--cat-llm)"></div>
+   622→   622→      LLM / AI <span style="margin-left:auto;font-size:11px;color:var(--ink3)" id="snb-llm">—</span>
+   623→   623→    </div>
+   624→   624→    <div class="cat-nav-item" onclick="showPage('costs'); scrollToCat('overhead')">
+   625→   625→      <div class="cat-dot" style="background:var(--cat-overhead)"></div>
+   626→   626→      Overhead <span style="margin-left:auto;font-size:11px;color:var(--ink3)" id="snb-overhead">—</span>
+   627→   627→    </div>
+   628→   628→  </div>
+   629→   629→
+   630→   630→  <div class="sidebar-totals">
+   631→   631→    <div class="st-row"><span class="st-label">One-time costs</span><span class="st-value" id="st-onetime">—</span></div>
+   632→   632→    <div class="st-row"><span class="st-label">Monthly recurring</span><span class="st-value" id="st-monthly">—</span></div>
+   633→   633→    <div class="st-row"><span class="st-label">Per-unit variable</span><span class="st-value" id="st-perunit">—</span></div>
+   634→   634→    <div class="st-row"><span class="st-label">Total project cost</span><span class="st-value" id="st-total">—</span></div>
+   635→   635→  </div>
+   636→   636→</div>
+   637→   637→
+   638→   638→<!-- ── MAIN ────────────────────────────────────────────────────── -->
+   639→   639→<div class="main">
+   640→   640→
+   641→   641→<!-- ══ PAGE: PROJECT SETUP ══════════════════════════════════════ -->
+   642→   642→<div class="page active" id="page-project">
+   643→   643→  <div class="page-header">
+   644→   644→    <div><div class="ph-title">Project setup</div><div class="ph-sub">Configure your project basics — all fields feed into every calculation</div></div>
+   645→   645→    <div class="ph-actions">
+   646→   646→      <button class="btn btn-primary" onclick="showPage('costs')">Next: Cost inputs →</button>
+   647→   647→    </div>
+   648→   648→  </div>
+   649→   649→  <div class="content">
+   650→   650→
+   651→   651→    <div class="card section-gap">
+   652→   652→      <div class="card-header"><div><div class="card-title">Project details</div><div class="card-sub">Core metadata used on the report cover and in all calculations</div></div></div>
+   653→   653→      <div class="form-grid g2">
+   654→   654→        <div class="field">
+   655→   655→          <label class="field-label">Project name</label>
+   656→   656→          <input type="text" id="f-projName" value="AI-Powered Analytics SaaS" oninput="recalcAll()" placeholder="e.g. Customer Intelligence Platform">
+   657→   657→        </div>
+   658→   658→        <div class="field">
+   659→   659→          <label class="field-label">Project description</label>
+   660→   660→          <input type="text" id="f-projDesc" value="B2B SaaS platform with LLM-powered insights" oninput="recalcAll()" placeholder="One-line description">
+   661→   661→        </div>
+   662→   662→        <div class="field">
+   663→   663→          <label class="field-label" data-tip="Development + launch duration. Multiplies all monthly costs.">Development duration (months)</label>
+   664→   664→          <input type="number" id="f-duration" value="12" min="1" max="120" step="1" oninput="recalcAll()">
+   665→   665→          <div class="field-hint">Monthly recurring costs × this number = total recurring spend</div>
+   666→   666→        </div>
+   667→   667→        <div class="field">
+   668→   668→          <label class="field-label">Currency</label>
+   669→   669→          <select id="f-currency" onchange="recalcAll()">
+   670→   670→            <option value="$">USD — US Dollar ($)</option>
+   671→   671→            <option value="£">GBP — British Pound (£)</option>
+   672→   672→            <option value="€">EUR — Euro (€)</option>
+   673→   673→            <option value="₹">INR — Indian Rupee (₹)</option>
+   674→   674→            <option value="A$">AUD — Australian Dollar (A$)</option>
+   675→   675→            <option value="C$">CAD — Canadian Dollar (C$)</option>
+   676→   676→          </select>
+   677→   677→        </div>
+   678→   678→        <div class="field">
+   679→   679→          <label class="field-label">Product category</label>
+   680→   680→          <select id="f-prodCat" onchange="recalcAll()">
+   681→   681→            <option value="b2b-saas">B2B SaaS</option>
+   682→   682→            <option value="b2c-saas">B2C SaaS / Consumer app</option>
+   683→   683→            <option value="api-platform">API / Developer platform</option>
+   684→   684→            <option value="marketplace">Marketplace</option>
+   685→   685→            <option value="internal-tool">Internal tool / Enterprise</option>
+   686→   686→            <option value="on-premises">On premises</option>
+   687→   687→          </select>
+   688→   688→        </div>
+   689→   689→        <div class="field">
+   690→   690→          <label class="field-label">Team location</label>
+   691→   691→          <select id="f-teamLoc" onchange="recalcAll()">
+   692→   692→            <option value="uk">United Kingdom</option>
+   693→   693→            <option value="us">United States</option>
+   694→   694→            <option value="eu">Western Europe</option>
+   695→   695→            <option value="eastern-eu">Eastern Europe</option>
+   696→   696→            <option value="india">India</option>
+   697→   697→            <option value="mixed">Mixed / Remote</option>
+   698→   698→          </select>
+   699→   699→        </div>
+   700→   700→      </div>
+   701→   701→    </div>
+   702→   702→
+   703→   703→    <div class="card section-gap">
+   704→   704→      <div class="card-header"><div><div class="card-title">Unit definition</div><div class="card-sub">Define what you are selling — this flows into all pricing and volume calculations</div></div></div>
+   705→   705→      <div class="form-grid g3">
+   706→   706→        <div class="field">
+   707→   707→          <label class="field-label">Unit / licence label</label>
+   708→   708→          <input type="text" id="f-unitLabel" value="Seats" oninput="recalcAll()" placeholder="e.g. Seats, Licences, Users">
+   709→   709→          <div class="field-hint">What one sale unit is called throughout the tool</div>
+   710→   710→        </div>
+   711→   711→        <div class="field">
+   712→   712→          <label class="field-label" data-tip="Planned sales volume during the first sales period (e.g. 12 months)">Target volume (units to sell)</label>
+   713→   713→          <input type="number" id="f-targetVol" value="500" min="1" oninput="recalcAll()">
+   714→   714→        </div>
+   715→   715→        <div class="field">
+   716→   716→          <label class="field-label">Sales period (months)</label>
+   717→   717→          <input type="number" id="f-salesPeriod" value="12" min="1" oninput="recalcAll()">
+   718→   718→          <div class="field-hint">Time window to reach target volume</div>
+   719→   719→        </div>
+   720→   720→      </div>
+   721→   721→    </div>
+   722→   722→
+   723→   723→    <div class="card">
+   724→   724→      <div class="card-header"><div><div class="card-title">Current state snapshot</div></div></div>
+   725→   725→      <div class="metric-grid mg-4">
+   726→   726→        <div class="metric-card blue"><div class="mc-label">Project name</div><div class="mc-value" id="snap-name" style="font-size:14px;word-break:break-word">—</div></div>
+   727→   727→        <div class="metric-card"><div class="mc-label">Duration</div><div class="mc-value" id="snap-dur">—</div><div class="mc-sub">months development</div></div>
+   728→   728→        <div class="metric-card"><div class="mc-label">Unit type</div><div class="mc-value" id="snap-unit" style="font-size:14px">—</div></div>
+   729→   729→        <div class="metric-card"><div class="mc-label">Target volume</div><div class="mc-value" id="snap-vol">—</div><div class="mc-sub" id="snap-volsub">—</div></div>
+   730→   730→      </div>
+   731→   731→    </div>
+   732→   732→
+   733→   733→  </div>
+   734→   734→</div>
+   735→   735→
+   736→   736→<!-- ══ PAGE: COST INPUTS ════════════════════════════════════════ -->
+   737→   737→<div class="page" id="page-costs">
+   738→   738→  <div class="page-header">
+   739→   739→    <div><div class="ph-title">Cost inputs</div><div class="ph-sub">Every line item is live — changes instantly update all downstream calculations</div></div>
+   740→   740→    <div class="ph-actions">
+   741→   741→      <button class="btn btn-secondary" onclick="showPage('project')">← Setup</button>
+   742→   742→      <button class="btn btn-primary" onclick="showPage('assumptions')">Next: Assumptions →</button>
+   743→   743→    </div>
+   744→   744→  </div>
+   745→   745→  <div class="content">
+   746→   746→
+   747→   747→    <div class="info-box">
+   748→   748→      💡 <strong>Cost types explained:</strong> <strong>Monthly</strong> = recurring spend × project duration months &nbsp;|&nbsp; <strong>One-time</strong> = fixed spend paid once &nbsp;|&nbsp; <strong>Per-unit</strong> = variable cost for each unit sold (scales with volume)
+   749→   749→    </div>
+   750→   750→
+   751→   751→    <!-- LABOUR -->
+   752→   752→    <div class="card section-gap" id="cat-labour">
+   753→   753→      <div class="cost-section-header">
+   754→   754→        <div class="csh-left">
+   755→   755→          <div class="csh-icon" style="background:#dbeafe;color:var(--cat-labour)">👷</div>
+   756→   756→          <div><div class="csh-title">Labour &amp; team</div><div class="csh-count" id="cc-labour">0 items</div></div>
+   757→   757→        </div>
+   758→   758→        <div style="display:flex;align-items:center;gap:12px">
+   759→   759→          <div class="csh-total" style="color:var(--cat-labour)" id="ct-labour">—</div>
+   760→   760→        </div>
+   761→   761→      </div>
+   762→   762→      <table class="cost-table" id="tbl-labour">
+   763→   763→        <thead><tr>
+   764→   764→          <th style="width:22%">Role / description</th>
+   765→   765→          <th style="width:11%">Rate basis</th>
+   766→   766→          <th style="width:10%">Rate</th>
+   767→   767→          <th style="width:9%">Hrs/mo (plan)</th>
+   768→   768→          <th style="width:8%">Count</th>
+   769→   769→          <th style="width:11%">Type</th>
+   770→   770→          <th class="r" style="width:13%">Line total</th>
+   771→   771→          <th style="width:11%">Notes</th>
+   772→   772→          <th style="width:5%"></th>
+   773→   773→        </tr></thead>
+   774→   774→        <tbody id="rows-labour"></tbody>
+   775→   775→      </table>
+   776→   776→      <button class="add-row-btn" onclick="addRow('labour')">+ Add team member / role</button>
+   777→   777→      <div class="info-box" style="margin-top:10px">
+   778→   778→        💡 <strong>Rate basis:</strong> choose <strong>Monthly salary</strong> (rate = full monthly cost, hours are for capacity planning only) or <strong>Hourly rate</strong> (rate × planned hours/month = monthly cost). Both feed the same total — switch any resource at any time without breaking calculations.
+   779→   779→      </div>
+   780→   780→    </div>
+   781→   781→
+   782→   782→    <!-- CLOUD INFRA -->
+   783→   783→    <div class="card section-gap" id="cat-infra">
+   784→   784→      <div class="cost-section-header">
+   785→   785→        <div class="csh-left">
+   786→   786→          <div class="csh-icon" style="background:#ccfbf1;color:var(--cat-infra)">☁</div>
+   787→   787→          <div><div class="csh-title">Cloud &amp; infrastructure</div><div class="csh-count" id="cc-infra">0 items</div></div>
+   788→   788→        </div>
+   789→   789→        <div class="csh-total" style="color:var(--cat-infra)" id="ct-infra">—</div>
+   790→   790→      </div>
+   791→   791→      <table class="cost-table" id="tbl-infra">
+   792→   792→        <thead><tr>
+   793→   793→          <th style="width:30%">Service / description</th>
+   794→   794→          <th style="width:13%">Cost / mo</th>
+   795→   795→          <th style="width:10%">Units</th>
+   796→   796→          <th style="width:15%">Type</th>
+   797→   797→          <th class="r" style="width:14%">Line total</th>
+   798→   798→          <th style="width:8%">Notes</th>
+   799→   799→          <th style="width:5%"></th>
+   800→   800→        </tr></thead>
+   801→   801→        <tbody id="rows-infra"></tbody>
+   802→   802→      </table>
+   803→   803→      <button class="add-row-btn" onclick="addRow('infra')">+ Add cloud / infra item</button>
+   804→   804→    </div>
+   805→   805→
+   806→   806→    <!-- APIS -->
+   807→   807→    <div class="card section-gap" id="cat-apis">
+   808→   808→      <div class="cost-section-header">
+   809→   809→        <div class="csh-left">
+   810→   810→          <div class="csh-icon" style="background:#ede9fe;color:var(--cat-apis)">🔌</div>
+   811→   811→          <div><div class="csh-title">APIs &amp; SaaS tools</div><div class="csh-count" id="cc-apis">0 items</div></div>
+   812→   812→        </div>
+   813→   813→        <div class="csh-total" style="color:var(--cat-apis)" id="ct-apis">—</div>
+   814→   814→      </div>
+   815→   815→      <table class="cost-table" id="tbl-apis">
+   816→   816→        <thead><tr>
+   817→   817→          <th style="width:30%">Service / provider</th>
+   818→   818→          <th style="width:13%">Cost / mo</th>
+   819→   819→          <th style="width:10%">Units</th>
+   820→   820→          <th style="width:15%">Type</th>
+   821→   821→          <th class="r" style="width:14%">Line total</th>
+   822→   822→          <th style="width:8%">Notes</th>
+   823→   823→          <th style="width:5%"></th>
+   824→   824→        </tr></thead>
+   825→   825→        <tbody id="rows-apis"></tbody>
+   826→   826→      </table>
+   827→   827→      <button class="add-row-btn" onclick="addRow('apis')">+ Add API / SaaS tool</button>
+   828→   828→    </div>
+   829→   829→
+   830→   830→    <!-- LLM -->
+   831→   831→    <div class="card section-gap" id="cat-llm">
+   832→   832→      <div class="cost-section-header">
+   833→   833→        <div class="csh-left">
+   834→   834→          <div class="csh-icon" style="background:#fef9c3;color:var(--cat-llm)">🤖</div>
+   835→   835→          <div><div class="csh-title">LLM &amp; AI costs</div><div class="csh-count" id="cc-llm">0 items</div></div>
+   836→   836→        </div>
+   837→   837→        <div class="csh-total" style="color:var(--cat-llm)" id="ct-llm">—</div>
+   838→   838→      </div>
+   839→   839→      <div class="info-box" style="margin-top:8px;margin-bottom:0">
+   840→   840→        🧮 <strong>Token estimator:</strong> Use the built-in estimator rows — enter your model and usage, and the monthly cost is auto-calculated. Or enter a known monthly cost directly.
+   841→   841→      </div>
+   842→   842→      <table class="cost-table" id="tbl-llm">
+   843→   843→        <thead><tr>
+   844→   844→          <th style="width:30%">Model / provider</th>
+   845→   845→          <th style="width:13%">Est. cost/mo</th>
+   846→   846→          <th style="width:10%">Units</th>
+   847→   847→          <th style="width:15%">Type</th>
+   848→   848→          <th class="r" style="width:14%">Line total</th>
+   849→   849→          <th style="width:8%">Notes</th>
+   850→   850→          <th style="width:5%"></th>
+   851→   851→        </tr></thead>
+   852→   852→        <tbody id="rows-llm"></tbody>
+   853→   853→      </table>
+   854→   854→      <button class="add-row-btn" onclick="addRow('llm')">+ Add LLM / AI model cost</button>
+   855→   855→    </div>
+   856→   856→
+   857→   857→    <!-- OVERHEAD -->
+   858→   858→    <div class="card section-gap" id="cat-overhead">
+   859→   859→      <div class="cost-section-header">
+   860→   860→        <div class="csh-left">
+   861→   861→          <div class="csh-icon" style="background:#f1f5f9;color:var(--cat-overhead)">🏢</div>
+   862→   862→          <div><div class="csh-title">Overhead &amp; contingency</div><div class="csh-count" id="cc-overhead">0 items</div></div>
+   863→   863→        </div>
+   864→   864→        <div class="csh-total" style="color:var(--cat-overhead)" id="ct-overhead">—</div>
+   865→   865→      </div>
+   866→   866→      <table class="cost-table" id="tbl-overhead">
+   867→   867→        <thead><tr>
+   868→   868→          <th style="width:30%">Item / description</th>
+   869→   869→          <th style="width:13%">Cost</th>
+   870→   870→          <th style="width:10%">Units</th>
+   871→   871→          <th style="width:15%">Type</th>
+   872→   872→          <th class="r" style="width:14%">Line total</th>
+   873→   873→          <th style="width:8%">Notes</th>
+   874→   874→          <th style="width:5%"></th>
+   875→   875→        </tr></thead>
+   876→   876→        <tbody id="rows-overhead"></tbody>
+   877→   877→      </table>
+   878→   878→      <button class="add-row-btn" onclick="addRow('overhead')">+ Add overhead item</button>
+   879→   879→    </div>
+   880→   880→
+   881→   881→  </div>
+   882→   882→</div>
+   883→   883→
+   884→   884→<!-- ══ PAGE: TIME TRACKING ══════════════════════════════════════ -->
+   885→   885→<div class="page" id="page-tracking">
+   886→   886→  <div class="page-header">
+   887→   887→    <div><div class="ph-title">Time tracking</div><div class="ph-sub">Log actual hours per resource per month — compares against planned hours and cost automatically</div></div>
+   888→   888→    <div class="ph-actions">
+   889→   889→      <button class="btn btn-secondary" onclick="showPage('costs')">← Costs</button>
+   890→   890→      <button class="btn btn-primary" onclick="showPage('evm')">Budget &amp; schedule →</button>
+   891→   891→    </div>
+   892→   892→  </div>
+   893→   893→  <div class="content">
+   894→   894→
+   895→   895→    <div class="info-box">
+   896→   896→      💡 <strong>How this works:</strong> for every labour resource, enter the actual hours worked in each month. The system compares this against planned hours (derived from monthly salary ÷ standard hours, or your entered hourly plan) to calculate cost variance and schedule variance — the same method professional project managers use (Earned Value Management).
+   897→   897→    </div>
+   898→   898→
+   899→   899→    <div class="card section-gap">
+   900→   900→      <div class="form-grid g3">
+   901→   901→        <div class="field">
+   902→   902→          <label class="field-label" data-tip="Used to convert monthly salary into an implied hourly rate for variance math">Standard working hours / month</label>
+   903→   903→          <input type="number" id="f-stdHours" value="160" min="1" oninput="recalcAll()">
+   904→   904→          <div class="field-hint">Typically 160–173 hrs (4.33 weeks × 37–40 hrs)</div>
+   905→   905→        </div>
+   906→   906→        <div class="field">
+   907→   907→          <label class="field-label" data-tip="Which month of the project are we currently in — drives Actual vs Planned comparisons">Current month (as of)</label>
+   908→   908→          <input type="number" id="f-currentMonth" value="6" min="1" oninput="recalcAll()">
+   909→   909→          <div class="field-hint">Project month number you're reporting as of</div>
+   910→   910→        </div>
+   911→   911→        <div class="field">
+   912→   912→          <label class="field-label">Planned project duration</label>
+   913→   913→          <input type="text" id="f-durationEcho" value="12 months" readonly style="background:var(--bg);color:var(--ink3)">
+   914→   914→          <div class="field-hint">Synced from Project Setup page</div>
+   915→   915→        </div>
+   916→   916→      </div>
+   917→   917→    </div>
+   918→   918→
+   919→   919→    <div class="card">
+   920→   920→      <div class="card-header">
+   921→   921→        <div><div class="card-title">Monthly actual hours by resource</div><div class="card-sub">Enter actual hours worked each month. Blank = not yet logged (assumed on-plan for future months).</div></div>
+   922→   922→      </div>
+   923→   923→      <div style="overflow-x:auto">
+   924→   924→        <table class="cost-table" id="tbl-tracking" style="min-width:1100px">
+   925→   925→          <thead><tr id="tracking-header-row">
+   926→   926→            <th style="width:180px;position:sticky;left:0;background:var(--surface);z-index:2">Resource</th>
+   927→   927→            <th style="width:90px">Plan hrs/mo</th>
+   928→   928→          </tr></thead>
+   929→   929→          <tbody id="rows-tracking"></tbody>
+   930→   930→        </table>
+   931→   931→      </div>
+   932→   932→    </div>
+   933→   933→
+   934→   934→  </div>
+   935→   935→</div>
+   936→   936→
+   937→   937→<!-- ══ PAGE: BUDGET & SCHEDULE (EVM) ════════════════════════════ -->
+   938→   938→<div class="page" id="page-evm">
+   939→   939→  <div class="page-header">
+   940→   940→    <div><div class="ph-title">Budget &amp; schedule performance</div><div class="ph-sub">Earned Value Management — where the project actually stands vs. the plan, and where it's heading</div></div>
+   941→   941→    <div class="ph-actions">
+   942→   942→      <button class="btn btn-secondary" onclick="showPage('tracking')">← Time tracking</button>
+   943→   943→      <button class="btn btn-primary" onclick="showPage('report')">View report →</button>
+   944→   944→    </div>
+   945→   945→  </div>
+   946→   946→  <div class="content">
+   947→   947→
+   948→   948→    <!-- EVM core metrics -->
+   949→   949→    <div class="metric-grid mg-4 section-gap">
+   950→   950→      <div class="metric-card" id="mc-pv"><div class="mc-label">Planned value (PV)</div><div class="mc-value" id="evm-pv">—</div><div class="mc-sub">Budgeted cost of work scheduled</div></div>
+   951→   951→      <div class="metric-card" id="mc-ev"><div class="mc-label">Earned value (EV)</div><div class="mc-value" id="evm-ev">—</div><div class="mc-sub">Budgeted cost of work done</div></div>
+   952→   952→      <div class="metric-card" id="mc-ac"><div class="mc-label">Actual cost (AC)</div><div class="mc-value" id="evm-ac">—</div><div class="mc-sub">Real cost spent to date</div></div>
+   953→   953→      <div class="metric-card" id="mc-eac"><div class="mc-label">Forecast at completion</div><div class="mc-value" id="evm-eac">—</div><div class="mc-sub" id="evm-eac-sub">EAC — projected final cost</div></div>
+   954→   954→    </div>
+   955→   955→
+   956→   956→    <div class="metric-grid mg-4 section-gap">
+   957→   957→      <div class="metric-card" id="mc-cv"><div class="mc-label">Cost variance (CV)</div><div class="mc-value" id="evm-cv">—</div><div class="mc-sub" id="evm-cv-sub">EV − AC</div></div>
+   958→   958→      <div class="metric-card" id="mc-sv"><div class="mc-label">Schedule variance (SV)</div><div class="mc-value" id="evm-sv">—</div><div class="mc-sub" id="evm-sv-sub">EV − PV</div></div>
+   959→   959→      <div class="metric-card" id="mc-cpi"><div class="mc-label">Cost performance index</div><div class="mc-value" id="evm-cpi">—</div><div class="mc-sub" id="evm-cpi-sub">CPI = EV ÷ AC</div></div>
+   960→   960→      <div class="metric-card" id="mc-spi"><div class="mc-label">Schedule performance index</div><div class="mc-value" id="evm-spi">—</div><div class="mc-sub" id="evm-spi-sub">SPI = EV ÷ PV</div></div>
+   961→   961→    </div>
+   962→   962→
+   963→   963→    <!-- Status verdict -->
+   964→   964→    <div id="evm-status-box" class="section-gap"></div>
+   965→   965→
+   966→   966→    <!-- Quadrant scatter -->
+   967→   967→    <div class="card section-gap">
+   968→   968→      <div class="card-header"><div><div class="card-title">Budget vs. schedule position</div><div class="card-sub">Where your project sits right now — ideal is top-right (under budget, ahead of schedule)</div></div></div>
+   969→   969→      <div id="evm-quadrant" style="display:flex;justify-content:center;padding:10px 0"></div>
+   970→   970→      <div style="display:flex;justify-content:center;gap:20px;font-size:12px;margin-top:8px;color:var(--ink3)">
+   971→   971→        <span>🔴 Over budget</span><span>🟢 Under budget</span><span>⬆ Ahead of schedule</span><span>⬇ Behind schedule</span>
+   972→   972→      </div>
+   973→   973→    </div>
+   974→   974→
+   975→   975→    <!-- Cost trend -->
+   976→   976→    <div class="card section-gap">
+   977→   977→      <div class="card-header"><div><div class="card-title">Planned vs. actual cost curve</div><div class="card-sub">Cumulative spend over project duration — where the lines diverge tells the story</div></div></div>
+   978→   978→      <div id="evm-trend-chart"></div>
+   979→   979→    </div>
+   980→   980→
+   981→   981→    <!-- Resource-level variance table -->
+   982→   982→    <div class="card section-gap">
+   983→   983→      <div class="card-header"><div><div class="card-title">Per-resource variance</div><div class="card-sub">Which roles are driving the overall variance</div></div></div>
+   984→   984→      <div style="overflow-x:auto">
+   985→   985→        <table class="sens-table">
+   986→   986→          <thead><tr>
+   987→   987→            <th>Resource</th>
+   988→   988→            <th class="r">Plan hrs to date</th>
+   989→   989→            <th class="r">Actual hrs to date</th>
+   990→   990→            <th class="r">Planned cost</th>
+   991→   991→            <th class="r">Actual cost</th>
+   992→   992→            <th class="r">Variance</th>
+   993→   993→            <th>Status</th>
+   994→   994→          </tr></thead>
+   995→   995→          <tbody id="evm-resource-tbody"></tbody>
+   996→   996→        </table>
+   997→   997→      </div>
+   998→   998→    </div>
+   999→   999→
+  1000→  1000→    <!-- Recommendations -->
+  1001→  1001→    <div class="card">
+  1002→  1002→      <div class="card-header"><div><div class="card-title">Recommendations to improve cost performance</div><div class="card-sub">Generated live from your current CPI, SPI, and resource variance data</div></div></div>
+  1003→  1003→      <div id="evm-recommendations"></div>
+  1004→  1004→    </div>
+  1005→  1005→
+  1006→  1006→  </div>
+  1007→  1007→</div>
+  1008→  1008→
+  1009→  1009→<!-- ══ PAGE: ASSUMPTIONS ════════════════════════════════════════ -->
+  1010→  1010→<div class="page" id="page-assumptions">
+  1011→  1011→  <div class="page-header">
+  1012→  1012→    <div><div class="ph-title">Assumptions &amp; targets</div><div class="ph-sub">Set your pricing strategy, profit target, and scenario variables</div></div>
+  1013→  1013→    <div class="ph-actions">
+  1014→  1014→      <button class="btn btn-secondary" onclick="showPage('costs')">← Costs</button>
+  1015→  1015→      <button class="btn btn-primary" onclick="showPage('analysis')">Next: Analysis →</button>
+  1016→  1016→    </div>
+  1017→  1017→  </div>
+  1018→  1018→  <div class="content">
+  1019→  1019→
+  1020→  1020→    <div class="card section-gap">
+  1021→  1021→      <div class="card-header"><div><div class="card-title">Pricing strategy</div></div></div>
+  1022→  1022→      <div class="form-grid g2">
+  1023→  1023→        <div class="field">
+  1024→  1024→          <label class="field-label" data-tip="Your desired profit as % of revenue. The selling price is derived from this + cost/unit.">Target profit margin (%)</label>
+  1025→  1025→          <div class="range-row">
+  1026→  1026→            <input type="range" id="f-margin" min="1" max="90" step="1" value="35" oninput="recalcAll()">
+  1027→  1027→            <div class="range-val" id="rv-margin">35%</div>
+  1028→  1028→          </div>
+  1029→  1029→          <div class="field-hint">Derived selling price = Cost per unit ÷ (1 – margin%)</div>
+  1030→  1030→        </div>
+  1031→  1031→        <div class="field">
+  1032→  1032→          <label class="field-label">Manual selling price (leave blank to auto-derive)</label>
+  1033→  1033→          <input type="number" id="f-sellingPrice" placeholder="Auto-calculated from margin" oninput="recalcAll()">
+  1034→  1034→          <div class="field-hint" id="fh-derived-price">Set above, or override here</div>
+  1035→  1035→        </div>
+  1036→  1036→        <div class="field">
+  1037→  1037→          <label class="field-label" data-tip="Expected monthly revenue growth after launch — e.g. from upsells or new customers">Annual price / volume growth (%)</label>
+  1038→  1038→          <div class="range-row">
+  1039→  1039→            <input type="range" id="f-growth" min="0" max="50" step="1" value="10" oninput="recalcAll()">
+  1040→  1040→            <div class="range-val" id="rv-growth">10%</div>
+  1041→  1041→          </div>
+  1042→  1042→        </div>
+  1043→  1043→        <div class="field">
+  1044→  1044→          <label class="field-label" data-tip="Monthly customer churn — percentage of customers who cancel each month">Monthly churn rate (%)</label>
+  1045→  1045→          <div class="range-row">
+  1046→  1046→            <input type="range" id="f-churn" min="0" max="20" step="0.5" value="3" oninput="recalcAll()">
+  1047→  1047→            <div class="range-val" id="rv-churn">3%</div>
+  1048→  1048→          </div>
+  1049→  1049→        </div>
+  1050→  1050→      </div>
+  1051→  1051→    </div>
+  1052→  1052→
+  1053→  1053→    <div class="card section-gap">
+  1054→  1054→      <div class="card-header"><div><div class="card-title">Scenario volumes</div><div class="card-sub">Three scenarios drive the sensitivity analysis and verdict</div></div></div>
+  1055→  1055→      <div class="form-grid g3">
+  1056→  1056→        <div class="field">
+  1057→  1057→          <label class="field-label">Optimistic volume (units)</label>
+  1058→  1058→          <input type="number" id="f-volOpt" value="800" oninput="recalcAll()">
+  1059→  1059→          <div class="field-hint">Best case — strong market uptake</div>
+  1060→  1060→        </div>
+  1061→  1061→        <div class="field">
+  1062→  1062→          <label class="field-label">Base case volume (units)</label>
+  1063→  1063→          <input type="number" id="f-volBase" value="500" oninput="recalcAll()">
+  1064→  1064→          <div class="field-hint">Expected — mirrors your target volume</div>
+  1065→  1065→        </div>
+  1066→  1066→        <div class="field">
+  1067→  1067→          <label class="field-label">Pessimistic volume (units)</label>
+  1068→  1068→          <input type="number" id="f-volPess" value="200" oninput="recalcAll()">
+  1069→  1069→          <div class="field-hint">Worst case — slow adoption</div>
+  1070→  1070→        </div>
+  1071→  1071→      </div>
+  1072→  1072→    </div>
+  1073→  1073→
+  1074→  1074→    <div class="card section-gap">
+  1075→  1075→      <div class="card-header"><div><div class="card-title">Risk buffers</div><div class="card-sub">Applied in worst-case sensitivity scenarios</div></div></div>
+  1076→  1076→      <div class="form-grid g2">
+  1077→  1077→        <div class="field">
+  1078→  1078→          <label class="field-label" data-tip="Added to total cost in overrun scenarios to model risk">Cost overrun buffer (%)</label>
+  1079→  1079→          <div class="range-row">
+  1080→  1080→            <input type="range" id="f-costBuffer" min="0" max="50" step="1" value="15" oninput="recalcAll()">
+  1081→  1081→            <div class="range-val" id="rv-costBuffer">15%</div>
+  1082→  1082→          </div>
+  1083→  1083→        </div>
+  1084→  1084→        <div class="field">
+  1085→  1085→          <label class="field-label" data-tip="Minimum ROI % required to flag as Go">Minimum ROI threshold (%)</label>
+  1086→  1086→          <input type="number" id="f-minROI" value="15" min="0" oninput="recalcAll()">
+  1087→  1087→        </div>
+  1088→  1088→        <div class="field">
+  1089→  1089→          <label class="field-label" data-tip="Maximum payback period in months to still flag as Go">Max payback period (months)</label>
+  1090→  1090→          <input type="number" id="f-maxPayback" value="36" min="1" oninput="recalcAll()">
+  1091→  1091→        </div>
+  1092→  1092→        <div class="field">
+  1093→  1093→          <label class="field-label" data-tip="Minimum gross margin % required to flag as Go">Minimum gross margin (%)</label>
+  1094→  1094→          <input type="number" id="f-minMargin" value="20" min="0" oninput="recalcAll()">
+  1095→  1095→        </div>
+  1096→  1096→      </div>
+  1097→  1097→    </div>
+  1098→  1098→
+  1099→  1099→    <div class="card">
+
+[showing lines 600-1099 of 2002; use offset=1100 with limit to continue reading]
