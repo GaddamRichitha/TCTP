@@ -23,15 +23,19 @@ export default function ReportPage() {
         : 'nogo';
 
   const exportCSV = () => {
-    const rows: string[] = [['Category', 'Description', 'Rate', 'Qty', 'Type', 'Monthly Cost', 'Total']];
+    const escapeCSV = (value: string | number) => {
+      const text = String(value);
+      return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    };
+    const rows: (string | number)[][] = [['Category', 'Description', 'Rate', 'Qty', 'Type', 'Monthly Cost', 'Total']];
     for (const [cat, items] of Object.entries(costItems)) {
       for (const item of items) {
         const mc = item.costType === 'monthly' ? (item.rateBasis === 'hourly' ? item.rate * item.plannedHours : item.rate) * item.quantity : 0;
         const total = item.costType === 'monthly' ? mc * project.duration : item.costType === 'onetime' ? item.rate * item.quantity : 0;
-        rows.push([cat, item.description, String(item.rate), String(item.quantity), item.costType, mc.toFixed(2), total.toFixed(2)]);
+        rows.push([cat, item.description, item.rate, item.quantity, item.costType, mc.toFixed(2), total.toFixed(2)]);
       }
     }
-    const csv = rows.map(r => r.join(',')).join('\n');
+    const csv = rows.map(r => r.map(escapeCSV).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -106,19 +110,19 @@ export default function ReportPage() {
               return (
                 <tr key={cat.key} className="border-b last:border-0">
                   <td className="py-2 flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: cat.color }} />{cat.label}</td>
-                  <td className="py-2 text-right tabular-nums">{formatCurrency(ct.monthly)}</td>
-                  <td className="py-2 text-right tabular-nums">{formatCurrency(ct.onetime)}</td>
-                  <td className="py-2 text-right tabular-nums">{formatCurrency(ct.perunit)}</td>
-                  <td className="py-2 text-right tabular-nums font-bold">{formatCurrency(ct.total)}</td>
+                  <td className="py-2 text-right tabular-nums">{formatCurrency(ct.monthly, project.currency)}</td>
+                  <td className="py-2 text-right tabular-nums">{formatCurrency(ct.onetime, project.currency)}</td>
+                  <td className="py-2 text-right tabular-nums">{formatCurrency(ct.perunit, project.currency)}</td>
+                  <td className="py-2 text-right tabular-nums font-bold">{formatCurrency(ct.total, project.currency)}</td>
                 </tr>
               );
             })}
             <tr className="font-bold">
               <td className="pt-2">Total</td>
-              <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalMonthly)}</td>
-              <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalOnetime)}</td>
-              <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalPerunit)}</td>
-              <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalProject)}</td>
+              <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalMonthly, project.currency)}</td>
+              <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalOnetime, project.currency)}</td>
+              <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalPerunit, project.currency)}</td>
+              <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalProject, project.currency)}</td>
             </tr>
           </tbody>
         </table>
@@ -126,9 +130,9 @@ export default function ReportPage() {
 
       {/* Pricing & Profitability */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KPICard label="Selling Price" value={formatCurrency(f.sellingPrice)} variant="teal" />
+        <KPICard label="Selling Price" value={formatCurrency(f.sellingPrice, project.currency)} variant="teal" />
         <KPICard label="Gross Margin" value={formatPercent(f.grossMarginPct)} variant={f.grossMarginPct >= project.minMargin ? 'green' : 'red'} />
-        <KPICard label="Net Profit" value={formatCurrency(f.netProfit)} variant={f.netProfit >= 0 ? 'green' : 'red'} />
+        <KPICard label="Net Profit" value={formatCurrency(f.netProfit, project.currency)} variant={f.netProfit >= 0 ? 'green' : 'red'} />
         <KPICard label="ROI" value={formatPercent(f.roi)} variant={f.roi >= project.minROI ? 'green' : 'amber'} />
       </div>
 
@@ -139,10 +143,10 @@ export default function ReportPage() {
           <div className="grid grid-cols-3 gap-3 text-sm">
             <div><span className="text-muted-foreground">CPI:</span> <span className="font-bold ml-1">{e.CPI.toFixed(2)}</span></div>
             <div><span className="text-muted-foreground">SPI:</span> <span className="font-bold ml-1">{e.SPI.toFixed(2)}</span></div>
-            <div><span className="text-muted-foreground">EAC:</span> <span className="font-bold ml-1">{formatCurrency(e.EAC)}</span></div>
-            <div><span className="text-muted-foreground">CV:</span> <span className={cn('font-bold ml-1', e.CV < 0 ? 'text-red-600' : 'text-emerald-600')}>{formatCurrency(e.CV)}</span></div>
-            <div><span className="text-muted-foreground">SV:</span> <span className={cn('font-bold ml-1', e.SV < 0 ? 'text-red-600' : 'text-emerald-600')}>{formatCurrency(e.SV)}</span></div>
-            <div><span className="text-muted-foreground">VAC:</span> <span className={cn('font-bold ml-1', e.VAC < 0 ? 'text-red-600' : 'text-emerald-600')}>{formatCurrency(e.VAC)}</span></div>
+            <div><span className="text-muted-foreground">EAC:</span> <span className="font-bold ml-1">{formatCurrency(e.EAC, project.currency)}</span></div>
+            <div><span className="text-muted-foreground">CV:</span> <span className={cn('font-bold ml-1', e.CV < 0 ? 'text-red-600' : 'text-emerald-600')}>{formatCurrency(e.CV, project.currency)}</span></div>
+            <div><span className="text-muted-foreground">SV:</span> <span className={cn('font-bold ml-1', e.SV < 0 ? 'text-red-600' : 'text-emerald-600')}>{formatCurrency(e.SV, project.currency)}</span></div>
+            <div><span className="text-muted-foreground">VAC:</span> <span className={cn('font-bold ml-1', e.VAC < 0 ? 'text-red-600' : 'text-emerald-600')}>{formatCurrency(e.VAC, project.currency)}</span></div>
           </div>
         </div>
       )}
@@ -160,7 +164,7 @@ export default function ReportPage() {
             { label: `ROI ≥ ${project.minROI}%`, pass: f.roi >= project.minROI, detail: `Actual: ${formatPercent(f.roi)}` },
             { label: `Margin ≥ ${project.minMargin}%`, pass: f.grossMarginPct >= project.minMargin, detail: `Actual: ${formatPercent(f.grossMarginPct)}` },
             { label: `Payback ≤ ${project.maxPayback} months`, pass: f.paybackMonths <= project.maxPayback, detail: `Actual: ${formatMonths(f.paybackMonths)}` },
-            { label: 'Net Profit positive', pass: f.netProfit >= 0, detail: `Actual: ${formatCurrency(f.netProfit)}` },
+            { label: 'Net Profit positive', pass: f.netProfit >= 0, detail: `Actual: ${formatCurrency(f.netProfit, project.currency)}` },
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-2 text-sm">
               {item.pass ? (
@@ -239,15 +243,15 @@ export default function ReportPage() {
                         <span className="text-xs text-muted-foreground">{cat.label}</span>
                       </td>
                       <td className="px-4 py-1.5">{item.description}</td>
-                      <td className="px-4 py-1.5 text-right tabular-nums">{formatCurrency(item.rate)}</td>
+                      <td className="px-4 py-1.5 text-right tabular-nums">{formatCurrency(item.rate, project.currency)}</td>
                       <td className="px-4 py-1.5 text-right tabular-nums">{item.quantity}</td>
                       <td className="px-4 py-1.5">
                         <Badge variant="secondary" className="text-[10px]">
                           {item.costType === 'monthly' ? 'Monthly' : item.costType === 'onetime' ? 'One-time' : 'Per-unit'}
                         </Badge>
                       </td>
-                      <td className="px-4 py-1.5 text-right tabular-nums">{formatCurrency(mc)}</td>
-                      <td className="px-4 py-1.5 text-right tabular-nums font-bold">{formatCurrency(total)}</td>
+                      <td className="px-4 py-1.5 text-right tabular-nums">{formatCurrency(mc, project.currency)}</td>
+                      <td className="px-4 py-1.5 text-right tabular-nums font-bold">{formatCurrency(total, project.currency)}</td>
                     </tr>
                   );
                 });

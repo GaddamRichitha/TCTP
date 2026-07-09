@@ -6,6 +6,7 @@ import { Sidebar } from './sidebar';
 import { LoginPage } from './login-page';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useSyncExternalStore } from 'react';
+import type { ComponentType } from 'react';
 import type { PageKey } from '@/lib/tctp-types';
 import {
   LayoutDashboard, Settings, DollarSign, Clock, Sliders, BarChart3, Target, FileText,
@@ -21,7 +22,7 @@ const AnalysisPage = dynamic(() => import('@/pages/tctp/analysis'));
 const EVMPage = dynamic(() => import('@/pages/tctp/evm-page'));
 const ReportPage = dynamic(() => import('@/pages/tctp/report'));
 
-const pageComponents: Record<PageKey, React.LazyExoticComponent<() => JSX.Element>> = {
+const pageComponents: Record<PageKey, ComponentType> = {
   'dashboard': DashboardPage,
   'project-setup': ProjectSetupPage,
   'costs': CostInputsPage,

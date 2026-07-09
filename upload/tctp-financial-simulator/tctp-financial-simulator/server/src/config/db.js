@@ -6,7 +6,7 @@ const pool = mysql.createPool({
   port: parseInt(process.env.DB_PORT, 10) || 3306,
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'tctp_simulator',
+  database: process.env.DB_DATABASE || process.env.DB_NAME || 'tctp_simulator',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -15,7 +15,7 @@ const pool = mysql.createPool({
 
 pool.getConnection()
   .then(conn => {
-    console.log(`[DB] Connected to MySQL: ${process.env.DB_NAME}@${process.env.DB_HOST}:${process.env.DB_PORT}`);
+    console.log(`[DB] Connected to MySQL: ${process.env.DB_DATABASE || process.env.DB_NAME}@${process.env.DB_HOST}:${process.env.DB_PORT}`);
     conn.release();
   })
   .catch(err => {

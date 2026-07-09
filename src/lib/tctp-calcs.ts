@@ -5,7 +5,7 @@ import type {
 } from './tctp-types';
 
 export function getRowMonthlyCost(item: CostItem): number {
-  if (item.costType === 'hourly' || item.rateBasis === 'hourly') {
+  if (item.rateBasis === 'hourly') {
     return item.rate * item.plannedHours;
   }
   if (item.costType === 'monthly') {
@@ -27,8 +27,10 @@ export function computeRowTotal(item: CostItem, duration: number): number {
 
 export function computeCategoryTotals(
   items: Record<string, CostItem[]>,
-  duration: number
+  duration: number,
+  costBuffer = 0
 ): CategoryTotals {
+  const bufferMultiplier = 1 + Math.max(costBuffer, 0) / 100;
   const result: CategoryTotals = {};
   for (const [cat, catItems] of Object.entries(items)) {
     const t: CatTotals = { monthly: 0, onetime: 0, perunit: 0, total: 0 };
@@ -42,6 +44,8 @@ export function computeCategoryTotals(
         t.perunit += item.rate * item.quantity;
       }
     }
+    t.monthly *= bufferMultiplier;
+    t.onetime *= bufferMultiplier;
     t.total = t.monthly * duration + t.onetime;
     result[cat] = t;
   }
@@ -340,7 +344,7 @@ export function computeAll(
   actualHours: Record<string, Record<number, number>>,
   project: ProjectSettings
 ): AllComputed {
-  const totals = computeCategoryTotals(items, project.duration);
+  const totals = computeCategoryTotals(items, project.duration, project.costBuffer);
   const pricingResult = computePricing(totals, project);
   const beResult = computeBreakeven(totals, project, pricingResult.sellingPrice);
   const revResult = computeRevenue(totals, project, pricingResult);

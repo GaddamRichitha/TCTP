@@ -20,7 +20,7 @@ const NAV_ITEMS: { key: PageKey; label: string; icon: React.ElementType }[] = [
 ];
 
 export function Sidebar() {
-  const { activePage, setActivePage, costItems, getComputed } = useTCTPStore();
+  const { activePage, setActivePage, costItems, project, getComputed } = useTCTPStore();
   const computed = getComputed();
   const f = computed.financial;
 
@@ -81,15 +81,15 @@ export function Sidebar() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Monthly</span>
-                <span className="font-semibold tabular-nums">{formatCurrency(f.totalMonthly)}</span>
+                <span className="font-semibold tabular-nums">{formatCurrency(f.totalMonthly, project.currency)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Project</span>
-                <span className="font-bold tabular-nums">{formatCurrency(f.totalProject)}</span>
+                <span className="font-bold tabular-nums">{formatCurrency(f.totalProject, project.currency)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Cost/Unit</span>
-                <span className="font-semibold tabular-nums">{formatCurrency(f.costPerUnit)}</span>
+                <span className="font-semibold tabular-nums">{formatCurrency(f.costPerUnit, project.currency)}</span>
               </div>
             </div>
           </div>

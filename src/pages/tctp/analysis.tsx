@@ -38,14 +38,14 @@ export default function AnalysisPage() {
       {/* Break-even */}
       <div className="grid gap-4 md:grid-cols-4">
         <KPICard label="Break-even Units" value={isFinite(f.beUnits) ? formatNumber(f.beUnits) : '∞'} />
-        <KPICard label="Break-even Revenue" value={formatCurrency(f.beRevenue)} />
-        <KPICard label="Target Revenue" value={formatCurrency(f.targetRevenue)} variant="teal" />
-        <KPICard label="Net Profit" value={formatCurrency(f.netProfit)} variant={f.netProfit >= 0 ? 'green' : 'red'} />
+        <KPICard label="Break-even Revenue" value={formatCurrency(f.beRevenue, project.currency)} />
+        <KPICard label="Target Revenue" value={formatCurrency(f.targetRevenue, project.currency)} variant="teal" />
+        <KPICard label="Net Profit" value={formatCurrency(f.netProfit, project.currency)} variant={f.netProfit >= 0 ? 'green' : 'red'} />
       </div>
 
       <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-4">
         <p className="text-sm text-amber-700 dark:text-amber-300 font-medium">
-          ℹ Break-even assumes {formatCurrency(f.sellingPrice)} selling price with {formatNumber(project.targetVolume)} target units over {project.duration} months. Per-unit variable costs: {formatCurrency(f.totalPerunit)}.
+          ℹ Break-even assumes {formatCurrency(f.sellingPrice, project.currency)} selling price with {formatNumber(project.targetVolume)} target units over {project.duration} months. Per-unit variable costs: {formatCurrency(f.totalPerunit, project.currency)}.
         </p>
       </div>
 
@@ -73,7 +73,7 @@ export default function AnalysisPage() {
                   <div key={cat.key}>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="font-medium">{cat.label}</span>
-                      <span className="tabular-nums text-muted-foreground">{formatCurrency(ct.total)} ({pct.toFixed(1)}%)</span>
+                      <span className="tabular-nums text-muted-foreground">{formatCurrency(ct.total, project.currency)} ({pct.toFixed(1)}%)</span>
                     </div>
                     <div className="h-6 rounded bg-muted overflow-hidden">
                       <div className="h-full rounded transition-all" style={{ width: `${pct}%`, backgroundColor: cat.color, minWidth: pct > 0 ? '4px' : '0' }} />
@@ -100,19 +100,19 @@ export default function AnalysisPage() {
                   return (
                     <tr key={cat.key} className="border-b last:border-0">
                       <td className="py-2 flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: cat.color }} />{cat.label}</td>
-                      <td className="py-2 text-right tabular-nums">{formatCurrency(ct.monthly)}</td>
-                      <td className="py-2 text-right tabular-nums">{formatCurrency(ct.onetime)}</td>
-                      <td className="py-2 text-right tabular-nums">{formatCurrency(ct.perunit)}</td>
-                      <td className="py-2 text-right tabular-nums font-bold">{formatCurrency(ct.total)}</td>
+                      <td className="py-2 text-right tabular-nums">{formatCurrency(ct.monthly, project.currency)}</td>
+                      <td className="py-2 text-right tabular-nums">{formatCurrency(ct.onetime, project.currency)}</td>
+                      <td className="py-2 text-right tabular-nums">{formatCurrency(ct.perunit, project.currency)}</td>
+                      <td className="py-2 text-right tabular-nums font-bold">{formatCurrency(ct.total, project.currency)}</td>
                     </tr>
                   );
                 })}
                 <tr className="font-bold">
                   <td className="pt-2">Total</td>
-                  <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalMonthly)}</td>
-                  <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalOnetime)}</td>
-                  <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalPerunit)}</td>
-                  <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalProject)}</td>
+                  <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalMonthly, project.currency)}</td>
+                  <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalOnetime, project.currency)}</td>
+                  <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalPerunit, project.currency)}</td>
+                  <td className="pt-2 text-right tabular-nums">{formatCurrency(f.totalProject, project.currency)}</td>
                 </tr>
               </tbody>
             </table>
@@ -143,8 +143,8 @@ export default function AnalysisPage() {
                       <td className="px-4 py-2">{sc.label}</td>
                       <td className="px-4 py-2 text-right tabular-nums">{sc.volumePct > 0 ? '+' : ''}{sc.volumePct}%</td>
                       <td className="px-4 py-2 text-right tabular-nums">{sc.volume}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(sc.revenue)}</td>
-                      <td className={cn('px-4 py-2 text-right tabular-nums', sc.profit < 0 ? 'text-red-600 dark:text-red-400' : '')}>{formatCurrency(sc.profit)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(sc.revenue, project.currency)}</td>
+                      <td className={cn('px-4 py-2 text-right tabular-nums', sc.profit < 0 ? 'text-red-600 dark:text-red-400' : '')}>{formatCurrency(sc.profit, project.currency)}</td>
                       <td className="px-4 py-2 text-right tabular-nums">{formatPercent(sc.roi)}</td>
                       <td className="px-4 py-2 text-right tabular-nums">{formatMonths(sc.payback)}</td>
                       <td className="px-4 py-2 text-right tabular-nums">{formatPercent(sc.marginPct)}</td>
@@ -176,7 +176,7 @@ export default function AnalysisPage() {
                     )}
                   </div>
                   <span className={cn('w-20 text-right tabular-nums text-xs font-medium', m.cumulative >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
-                    {m.cumulative >= 0 ? '+' : ''}{formatCurrency(m.cumulative)}
+                    {m.cumulative >= 0 ? '+' : ''}{formatCurrency(m.cumulative, project.currency)}
                   </span>
                 </div>
               ))}
@@ -207,7 +207,7 @@ export default function AnalysisPage() {
                         {isLast ? '≠ ' : i === 0 ? '' : '− '}{item.label}
                       </span>
                       <span className={cn('tabular-nums font-bold', isLast && (item.running >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'))}>
-                        {formatCurrency(item.value)}
+                        {formatCurrency(item.value, project.currency)}
                       </span>
                     </div>
                     <div className="h-7 rounded bg-muted overflow-hidden">

@@ -5,14 +5,7 @@ import { formatCurrency, cn, CATEGORIES } from '@/lib/tctp-utils';
 import type { Category, CostType } from '@/lib/tctp-types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2 } from 'lucide-react';
-
-const typeStyles: Record<CostType, string> = {
-  monthly: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-  onetime: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
-  perunit: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
-};
 
 export default function CostInputsPage() {
   const { project, costItems, addCostItem, updateCostItem, deleteCostItem } = useTCTPStore();
@@ -101,9 +94,15 @@ export default function CostInputsPage() {
                       />
                     </td>
                     <td className="px-4 py-2">
-                      <Badge variant="secondary" className={cn('text-[10px]', typeStyles[item.costType])}>
-                        {item.costType === 'monthly' ? 'Monthly' : item.costType === 'onetime' ? 'One-time' : 'Per-unit'}
-                      </Badge>
+                      <select
+                        value={item.costType}
+                        onChange={(e) => updateCostItem(activeCat, item.id, { costType: e.target.value as CostType })}
+                        className="h-8 rounded border bg-transparent px-2 text-xs cursor-pointer"
+                      >
+                        <option value="monthly">Monthly</option>
+                        <option value="onetime">One-time</option>
+                        <option value="perunit">Per-unit</option>
+                      </select>
                     </td>
                     <td className="px-4 py-2">
                       <select
@@ -123,8 +122,8 @@ export default function CostInputsPage() {
                         className="h-8 w-16 border-0 bg-transparent p-0 text-right shadow-none tabular-nums focus-visible:ring-0 focus-visible:ring-offset-0"
                       />
                     </td>
-                    <td className="px-4 py-2 text-right tabular-nums font-medium">{formatCurrency(monthly)}</td>
-                    <td className="px-4 py-2 text-right tabular-nums font-bold">{formatCurrency(total)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums font-medium">{formatCurrency(monthly, project.currency)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums font-bold">{formatCurrency(total, project.currency)}</td>
                     <td className="px-4 py-2">
                       <Input
                         value={item.notes}

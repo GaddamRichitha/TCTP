@@ -106,7 +106,19 @@ export const useTCTPStore = create<TCTPStore>((set, get) => ({
   },
 
   setProjectField: (key, value) =>
-    set((s) => ({ project: { ...s.project, [key]: value } })),
+    set((s) => {
+      const project = { ...s.project, [key]: value };
+      project.duration = Math.max(1, Math.round(Number(project.duration) || 1));
+      project.currentMonth = Math.min(
+        project.duration,
+        Math.max(0, Math.round(Number(project.currentMonth) || 0))
+      );
+      project.salesPeriod = Math.max(1, Math.round(Number(project.salesPeriod) || 1));
+      project.targetVolume = Math.max(1, Number(project.targetVolume) || 1);
+      project.standardHours = Math.max(1, Number(project.standardHours) || 1);
+      project.sellingPriceOverride = Math.max(0, Number(project.sellingPriceOverride) || 0);
+      return { project };
+    }),
 
   setActivePage: (page) => set({ activePage: page, sidebarOpen: false }),
 

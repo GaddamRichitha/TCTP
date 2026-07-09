@@ -17,6 +17,8 @@ export default function DashboardPage() {
         : 'nogo';
 
   const totalCat = Object.values(f.catTotals).reduce((s, c) => s + c.total, 0);
+  const unitName = project.unitLabel.trim() || 'unit';
+  const unitSingular = unitName.toLowerCase().endsWith('s') ? unitName.slice(0, -1) : unitName;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -27,9 +29,9 @@ export default function DashboardPage() {
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-        <KPICard label="Project Cost" value={formatCurrency(f.totalProject)} variant="teal" />
-        <KPICard label="Selling Price" value={formatCurrency(f.sellingPrice)} sub={`per ${project.unitLabel.slice(0, -1).toLowerCase()}`} />
-        <KPICard label="Net Profit" value={formatCurrency(f.netProfit)} variant={f.netProfit >= 0 ? 'green' : 'red'} />
+        <KPICard label="Project Cost" value={formatCurrency(f.totalProject, project.currency)} variant="teal" />
+        <KPICard label="Selling Price" value={formatCurrency(f.sellingPrice, project.currency)} sub={`per ${unitSingular.toLowerCase()}`} />
+        <KPICard label="Net Profit" value={formatCurrency(f.netProfit, project.currency)} variant={f.netProfit >= 0 ? 'green' : 'red'} />
         <KPICard label="ROI" value={formatPercent(f.roi)} variant={f.roi >= project.minROI ? 'green' : 'amber'} />
         <KPICard label="Margin" value={formatPercent(f.grossMarginPct)} />
         <KPICard label="Payback" value={formatMonths(f.paybackMonths)} variant={f.paybackMonths <= project.maxPayback ? 'default' : 'red'} />
@@ -53,7 +55,7 @@ export default function DashboardPage() {
               <div key={cat.key}>
                 <div className="mb-1 flex items-center justify-between text-sm">
                   <span className="font-medium">{cat.label}</span>
-                  <span className="tabular-nums text-muted-foreground">{formatCurrency(ct.total)} · {pct.toFixed(1)}%</span>
+                  <span className="tabular-nums text-muted-foreground">{formatCurrency(ct.total, project.currency)} · {pct.toFixed(1)}%</span>
                 </div>
                 <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
                   <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: cat.color }} />
@@ -68,12 +70,12 @@ export default function DashboardPage() {
       {e && (
         <>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-            <KPICard label="PV (Planned)" value={formatCurrency(e.PV)} />
-            <KPICard label="EV (Earned)" value={formatCurrency(e.EV)} />
-            <KPICard label="AC (Actual)" value={formatCurrency(e.AC)} />
+            <KPICard label="PV (Planned)" value={formatCurrency(e.PV, project.currency)} />
+            <KPICard label="EV (Earned)" value={formatCurrency(e.EV, project.currency)} />
+            <KPICard label="AC (Actual)" value={formatCurrency(e.AC, project.currency)} />
             <KPICard label="CPI" value={e.CPI.toFixed(2)} variant={e.CPI >= 0.95 ? 'green' : e.CPI >= 0.85 ? 'amber' : 'red'} />
             <KPICard label="SPI" value={e.SPI.toFixed(2)} variant={e.SPI >= 0.95 ? 'green' : e.SPI >= 0.85 ? 'amber' : 'red'} />
-            <KPICard label="EAC" value={formatCurrency(e.EAC)} />
+            <KPICard label="EAC" value={formatCurrency(e.EAC, project.currency)} />
           </div>
 
           {/* EVM Trend SVG */}
@@ -158,9 +160,9 @@ export default function DashboardPage() {
                       <td className="py-2 pr-4 text-right tabular-nums">{r.planHoursToDate}</td>
                       <td className="py-2 pr-4 text-right tabular-nums">{r.actualHoursToDate}</td>
                       <td className={cn('py-2 pr-4 text-right tabular-nums', r.variance < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400')}>
-                        {r.variance >= 0 ? '+' : ''}{formatCurrency(r.variance)}
+                        {r.variance >= 0 ? '+' : ''}{formatCurrency(r.variance, project.currency)}
                       </td>
-                      <td className="py-2 pr-4 text-right tabular-nums">{formatCurrency(r.earnedValue)}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">{formatCurrency(r.earnedValue, project.currency)}</td>
                       <td className="py-2 text-right">
                         <Badge variant={r.status === 'good' ? 'default' : r.status === 'warn' ? 'secondary' : 'destructive'}
                           className={cn(

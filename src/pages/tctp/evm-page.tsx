@@ -41,12 +41,12 @@ export default function EVMPage() {
 
       {/* 8 Metric Cards */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KPICard label="PV (Planned Value)" value={formatCurrency(e.PV)} />
-        <KPICard label="EV (Earned Value)" value={formatCurrency(e.EV)} />
-        <KPICard label="AC (Actual Cost)" value={formatCurrency(e.AC)} />
-        <KPICard label="EAC (Est. at Completion)" value={formatCurrency(e.EAC)} variant={e.EAC <= e.BAC ? 'green' : 'red'} />
-        <KPICard label="CV (Cost Var.)" value={formatCurrency(e.CV)} variant={e.CV >= 0 ? 'green' : 'red'} />
-        <KPICard label="SV (Schedule Var.)" value={formatCurrency(e.SV)} variant={e.SV >= 0 ? 'green' : 'red'} />
+        <KPICard label="PV (Planned Value)" value={formatCurrency(e.PV, project.currency)} />
+        <KPICard label="EV (Earned Value)" value={formatCurrency(e.EV, project.currency)} />
+        <KPICard label="AC (Actual Cost)" value={formatCurrency(e.AC, project.currency)} />
+        <KPICard label="EAC (Est. at Completion)" value={formatCurrency(e.EAC, project.currency)} variant={e.EAC <= e.BAC ? 'green' : 'red'} />
+        <KPICard label="CV (Cost Var.)" value={formatCurrency(e.CV, project.currency)} variant={e.CV >= 0 ? 'green' : 'red'} />
+        <KPICard label="SV (Schedule Var.)" value={formatCurrency(e.SV, project.currency)} variant={e.SV >= 0 ? 'green' : 'red'} />
         <KPICard label="CPI" value={e.CPI.toFixed(2)} variant={e.CPI >= 0.95 ? 'green' : e.CPI >= 0.85 ? 'amber' : 'red'} />
         <KPICard label="SPI" value={e.SPI.toFixed(2)} variant={e.SPI >= 0.95 ? 'green' : e.SPI >= 0.85 ? 'amber' : 'red'} />
       </div>
@@ -139,11 +139,11 @@ export default function EVMPage() {
                   <td className="py-2 font-medium">{r.description}</td>
                   <td className="py-2 text-right tabular-nums">{formatNumber(r.planHoursToDate)}</td>
                   <td className="py-2 text-right tabular-nums">{formatNumber(r.actualHoursToDate)}</td>
-                  <td className="py-2 text-right tabular-nums">{formatCurrency(r.plannedCost)}</td>
-                  <td className="py-2 text-right tabular-nums">{formatCurrency(r.actualCost)}</td>
-                  <td className="py-2 text-right tabular-nums">{formatCurrency(r.earnedValue)}</td>
+                  <td className="py-2 text-right tabular-nums">{formatCurrency(r.plannedCost, project.currency)}</td>
+                  <td className="py-2 text-right tabular-nums">{formatCurrency(r.actualCost, project.currency)}</td>
+                  <td className="py-2 text-right tabular-nums">{formatCurrency(r.earnedValue, project.currency)}</td>
                   <td className={cn('py-2 text-right tabular-nums font-semibold', r.variance < 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400')}>
-                    {formatCurrency(r.variance)}
+                    {formatCurrency(r.variance, project.currency)}
                   </td>
                   <td className="py-2 text-center">
                     <Badge className={cn(
@@ -177,7 +177,7 @@ export default function EVMPage() {
         {e.VAC < 0 && (
           <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 p-4">
             <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Budget Overrun Warning</p>
-            <p className="mt-1 text-xs text-amber-600/80 dark:text-amber-400/80">VAC of {formatCurrency(e.VAC)} indicates estimated costs will exceed budget by {formatCurrency(Math.abs(e.VAC))}. Prepare a contingency request.</p>
+            <p className="mt-1 text-xs text-amber-600/80 dark:text-amber-400/80">VAC of {formatCurrency(e.VAC, project.currency)} indicates estimated costs will exceed budget by {formatCurrency(Math.abs(e.VAC), project.currency)}. Prepare a contingency request.</p>
           </div>
         )}
         {e.CPI >= 0.9 && e.SPI >= 0.9 && (

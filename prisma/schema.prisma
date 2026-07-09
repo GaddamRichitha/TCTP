@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -17,6 +17,7 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
+  projects  Project[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -29,4 +30,68 @@ model Post {
   authorId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Project {
+  id                   String     @id @default(cuid())
+  seedKey              String?    @unique
+  userId               String?
+  user                 User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name                 String
+  description          String?    @db.Text
+  duration             Int        @default(12)
+  currency             String     @default("$")
+  unitLabel            String     @default("Units")
+  currentMonth         Int        @default(3)
+  standardHours        Float      @default(160)
+  targetMargin         Float      @default(35)
+  targetVolume         Float      @default(500)
+  salesPeriod          Int        @default(12)
+  churnRate            Float      @default(3)
+  growthRate           Float      @default(10)
+  costBuffer           Float      @default(15)
+  minROI               Float      @default(15)
+  maxPayback           Float      @default(36)
+  minMargin            Float      @default(20)
+  sellingPriceOverride Float      @default(0)
+  isActive             Boolean    @default(true)
+  costItems            CostItem[]
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  @@index([userId])
+}
+
+model CostItem {
+  id           String    @id @default(cuid())
+  seedKey      String?   @unique
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category     String
+  description  String
+  rate         Float     @default(0)
+  quantity     Float     @default(1)
+  costType     String    @default("monthly")
+  rateBasis    String    @default("monthly")
+  plannedHours Float     @default(0)
+  notes        String?   @db.Text
+  sortOrder    Int       @default(0)
+  timeLogs     TimeLog[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([category])
+}
+
+model TimeLog {
+  id         String   @id @default(cuid())
+  costItemId String
+  costItem   CostItem @relation(fields: [costItemId], references: [id], onDelete: Cascade)
+  month      Int
+  hours      Float    @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([costItemId, month])
 }

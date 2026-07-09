@@ -80,9 +80,9 @@ export default function AssumptionsPage() {
 
       {/* Derived Outputs */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KPICard label="Derived Price" value={formatCurrency(f.derivedPrice)} variant="teal" />
-        <KPICard label="Selling Price" value={formatCurrency(f.sellingPrice)} />
-        <KPICard label="Cost/Unit" value={formatCurrency(f.costPerUnit)} variant="amber" />
+        <KPICard label="Derived Price" value={formatCurrency(f.derivedPrice, project.currency)} variant="teal" />
+        <KPICard label="Selling Price" value={formatCurrency(f.sellingPrice, project.currency)} />
+        <KPICard label="Cost/Unit" value={formatCurrency(f.costPerUnit, project.currency)} variant="amber" />
         <KPICard label="Gross Margin" value={formatPercent(f.grossMarginPct)} variant={f.grossMarginPct >= project.minMargin ? 'green' : 'red'} />
       </div>
     </div>
