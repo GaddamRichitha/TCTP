@@ -1,0 +1,3194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TCTP — Software Financial Simulator</title>
+<style>
+/* ── DESIGN TOKENS ─────────────────────────────────────────────── */
+:root {
+  --ink:       #0f1923;
+  --ink2:      #3d4f5c;
+  --ink3:      #7a8fa0;
+  --ink4:      #b0c0cc;
+  --bg:        #f0f4f8;
+  --surface:   #ffffff;
+  --surface2:  #f7fafc;
+  --border:    #dde4eb;
+  --border2:   #c5d0da;
+
+  --blue:      #1a6cf0;
+  --blue-dk:   #1254c0;
+  --blue-lt:   #e8f0fd;
+  --blue-mid:  #3d7ef5;
+
+  --teal:      #0ea8a8;
+  --teal-lt:   #e0f7f7;
+  --green:     #16a34a;
+  --green-lt:  #dcfce7;
+  --amber:     #d97706;
+  --amber-lt:  #fef3c7;
+  --red:       #dc2626;
+  --red-lt:    #fee2e2;
+  --purple:    #7c3aed;
+  --purple-lt: #ede9fe;
+
+  --r4:  4px;
+  --r8:  8px;
+  --r12: 12px;
+
+  /* Category palette */
+  --cat-labour:   #1a6cf0;
+  --cat-infra:    #0ea8a8;
+  --cat-apis:     #7c3aed;
+  --cat-llm:      #d97706;
+  --cat-overhead: #6b7280;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── APP SHELL ──────────────────────────────────────────────────── */
+.app-bar {
+  background: var(--ink);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 52px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.app-bar-brand { display: flex; align-items: center; gap: 10px; }
+.app-bar-logo {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #fff;
+}
+.app-bar-logo span { color: var(--blue-mid); }
+.app-bar-sub { font-size: 12px; color: #8fa0b0; }
+.app-bar-right { display: flex; align-items: center; gap: 8px; }
+.app-bar-badge {
+  background: var(--blue);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+}
+.live-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 2s infinite;
+  display: inline-block;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.live-label { font-size: 11px; color: #8fa0b0; display: flex; align-items: center; gap: 5px; }
+
+/* ── LAYOUT ─────────────────────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: calc(100vh - 52px);
+}
+
+/* ── SIDEBAR NAV ─────────────────────────────────────────────────── */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 20px 0;
+  position: sticky;
+  top: 52px;
+  height: calc(100vh - 52px);
+  overflow-y: auto;
+}
+.sidebar-section { margin-bottom: 4px; }
+.sidebar-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink3);
+  padding: 8px 20px 4px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+  font-size: 13px;
+  color: var(--ink2);
+}
+.nav-item:hover { background: var(--bg); color: var(--ink); }
+.nav-item.active {
+  background: var(--blue-lt);
+  border-left-color: var(--blue);
+  color: var(--blue-dk);
+  font-weight: 600;
+}
+.nav-item .nav-icon {
+  width: 28px; height: 28px;
+  border-radius: var(--r8);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.nav-item.active .nav-icon { background: var(--blue); color: #fff; }
+.nav-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 20px;
+  background: var(--bg);
+  color: var(--ink3);
+}
+.nav-item.active .nav-badge { background: var(--blue-dk); color: #fff; }
+
+/* Category nav sub-items */
+.cat-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 20px 7px 36px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink2);
+  transition: all 0.15s;
+}
+.cat-nav-item:hover { background: var(--bg); }
+.cat-nav-item.active { color: var(--blue-dk); font-weight: 600; }
+.cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* Sidebar totals */
+.sidebar-totals {
+  margin: 16px 12px 0;
+  background: var(--bg);
+  border-radius: var(--r8);
+  padding: 12px;
+}
+.st-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 12px; }
+.st-row:last-child { margin-bottom: 0; border-top: 1px solid var(--border); padding-top: 6px; margin-top: 6px; font-weight: 700; }
+.st-label { color: var(--ink2); }
+.st-value { font-weight: 600; color: var(--ink); font-feature-settings: 'tnum'; }
+
+/* ── MAIN CONTENT ────────────────────────────────────────────────── */
+.main { overflow-y: auto; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── PAGE HEADER ─────────────────────────────────────────────────── */
+.page-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.ph-title { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+.ph-sub { font-size: 13px; color: var(--ink3); margin-top: 2px; }
+.ph-actions { display: flex; gap: 8px; }
+
+/* ── BUTTONS ─────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--r8);
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; border: none;
+  transition: all 0.15s;
+}
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-primary:hover { background: var(--blue-dk); }
+
+/* Export menu */
+.export-menu {
+  display: none;
+  position: absolute; top: calc(100% + 6px); right: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r12); box-shadow: 0 8px 24px rgba(15,25,35,0.14);
+  width: 260px; padding: 6px; z-index: 200;
+}
+.export-menu.open { display: block; }
+.export-menu-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: var(--r8); cursor: pointer;
+  transition: background 0.12s;
+}
+.export-menu-item:hover { background: var(--bg); }
+.export-icon {
+  width: 34px; height: 28px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.02em; flex-shrink: 0;
+}
+.export-item-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+.export-item-sub { font-size: 11px; color: var(--ink3); margin-top: 1px; }
+.export-status {
+  margin: 0 28px; padding: 10px 16px; border-radius: var(--r8);
+  background: var(--blue-lt); color: var(--blue-dk); font-size: 13px;
+  font-weight: 500; display: flex; align-items: center; gap: 8px;
+}
+.export-status.success { background: var(--green-lt); color: var(--green); }
+.export-status.error { background: var(--red-lt); color: var(--red); }
+.export-spinner {
+  width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn-secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--border2); }
+.btn-secondary:hover { background: var(--bg); }
+.btn-ghost { background: transparent; color: var(--ink2); border: 1px solid transparent; }
+.btn-ghost:hover { background: var(--bg); color: var(--ink); }
+.btn-danger { background: var(--red-lt); color: var(--red); border: 1px solid #fca5a5; }
+.btn-danger:hover { background: #fecaca; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-xs { padding: 3px 8px; font-size: 11px; border-radius: 5px; }
+
+/* ── FORMS ───────────────────────────────────────────────────────── */
+.form-grid { display: grid; gap: 16px; }
+.g2 { grid-template-columns: 1fr 1fr; }
+.g3 { grid-template-columns: 1fr 1fr 1fr; }
+.g4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field-label { font-size: 12px; font-weight: 600; color: var(--ink2); }
+.field-hint { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+.field input, .field select, .field textarea {
+  border: 1px solid var(--border2);
+  border-radius: var(--r8);
+  padding: 8px 10px;
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--ink);
+  outline: none;
+  width: 100%;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(26,108,240,.1);
+}
+.field input[type=range] {
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  accent-color: var(--blue);
+  cursor: pointer;
+}
+.range-row { display: flex; align-items: center; gap: 8px; }
+.range-val { font-size: 14px; font-weight: 700; min-width: 48px; text-align: right; color: var(--blue); }
+
+/* ── CARDS ───────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r12);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.card-title { font-size: 14px; font-weight: 700; }
+.card-sub { font-size: 12px; color: var(--ink3); margin-top: 2px; }
+
+/* ── METRIC CARDS ────────────────────────────────────────────────── */
+.metric-grid { display: grid; gap: 12px; }
+.mg-3 { grid-template-columns: repeat(3,1fr); }
+.mg-4 { grid-template-columns: repeat(4,1fr); }
+.mg-6 { grid-template-columns: repeat(6,1fr); }
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r12);
+  padding: 16px;
+}
+.mc-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink3); margin-bottom: 6px; }
+.mc-value { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; font-feature-settings: 'tnum'; }
+.mc-sub { font-size: 11px; color: var(--ink3); margin-top: 4px; }
+.mc-trend { font-size: 11px; font-weight: 700; margin-top: 3px; }
+.metric-card.blue  { border-color: #93c5fd; background: var(--blue-lt); } .metric-card.blue .mc-value { color: var(--blue-dk); }
+.metric-card.green { border-color: #86efac; background: var(--green-lt); } .metric-card.green .mc-value { color: var(--green); }
+.metric-card.amber { border-color: #fcd34d; background: var(--amber-lt); } .metric-card.amber .mc-value { color: var(--amber); }
+.metric-card.red   { border-color: #fca5a5; background: var(--red-lt); }   .metric-card.red .mc-value   { color: var(--red); }
+.metric-card.purple{ border-color: #c4b5fd; background: var(--purple-lt); } .metric-card.purple .mc-value{ color: var(--purple); }
+.metric-card.teal  { border-color: #99f6e4; background: var(--teal-lt); }   .metric-card.teal .mc-value  { color: var(--teal); }
+
+/* ── COST ITEM ROWS ──────────────────────────────────────────────── */
+.cost-section { margin-bottom: 24px; }
+.cost-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-bottom: 2px solid var(--border);
+  margin-bottom: 0;
+}
+.csh-left { display: flex; align-items: center; gap: 10px; }
+.csh-icon {
+  width: 32px; height: 32px; border-radius: var(--r8);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.csh-title { font-size: 14px; font-weight: 700; }
+.csh-count { font-size: 11px; color: var(--ink3); }
+.csh-total { font-size: 14px; font-weight: 800; font-feature-settings: 'tnum'; }
+
+.cost-table { width: 100%; border-collapse: collapse; }
+.cost-table th {
+  text-align: left;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ink3);
+  padding: 8px 8px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.cost-table th.r { text-align: right; }
+.cost-table tbody tr { border-bottom: 1px solid var(--border); }
+.cost-table tbody tr:last-child { border-bottom: none; }
+.cost-table tbody tr:hover { background: var(--bg); }
+.cost-table td { padding: 7px 8px; vertical-align: middle; }
+.cost-table td input, .cost-table td select {
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 5px 7px;
+  font-size: 13px;
+  background: transparent;
+  color: var(--ink);
+  width: 100%;
+  outline: none;
+  font-family: inherit;
+}
+.cost-table td input:hover, .cost-table td select:hover { border-color: var(--border2); background: var(--surface); }
+.cost-table td input:focus, .cost-table td select:focus {
+  border-color: var(--blue);
+  background: var(--surface);
+  box-shadow: 0 0 0 2px rgba(26,108,240,.1);
+}
+.cost-table td.r { text-align: right; }
+.row-total { font-weight: 700; font-feature-settings: 'tnum'; font-size: 13px; }
+.type-badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 7px; border-radius: 20px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+}
+.type-monthly  { background: var(--blue-lt); color: var(--blue-dk); }
+.type-onetime  { background: var(--amber-lt); color: #92400e; }
+.type-perunit  { background: var(--purple-lt); color: #4c1d95; }
+
+.add-row-btn {
+  display: flex; align-items: center; gap: 6px;
+  width: 100%; padding: 8px 12px;
+  border: 1px dashed var(--border2);
+  border-radius: var(--r8); background: none;
+  color: var(--ink3); font-size: 12px; cursor: pointer;
+  transition: all 0.15s; margin-top: 6px;
+}
+.add-row-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-lt); }
+
+/* ── CHART BARS ──────────────────────────────────────────────────── */
+.bar-chart { display: flex; flex-direction: column; gap: 10px; }
+.bar-row { display: flex; align-items: center; gap: 10px; }
+.bar-label { font-size: 12px; color: var(--ink2); width: 100px; text-align: right; flex-shrink: 0; }
+.bar-track { flex: 1; background: var(--bg); border-radius: 3px; height: 20px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.bar-val { font-size: 12px; font-weight: 700; font-feature-settings: 'tnum'; width: 90px; flex-shrink: 0; }
+
+/* ── SENSITIVITY TABLE ───────────────────────────────────────────── */
+.sens-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.sens-table th {
+  background: var(--bg); padding: 8px 12px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--ink3);
+  border-bottom: 1px solid var(--border); text-align: left;
+}
+.sens-table th.r { text-align: right; }
+.sens-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+.sens-table td.r { text-align: right; font-feature-settings: 'tnum'; font-weight: 600; }
+.sens-table tr:last-child td { border-bottom: none; }
+.sens-table tr:hover td { background: var(--bg); }
+.verdict-pill {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+}
+.vp-go     { background: var(--green-lt); color: var(--green); }
+.vp-caution{ background: var(--amber-lt); color: var(--amber); }
+.vp-nogo   { background: var(--red-lt); color: var(--red); }
+
+/* ── VERDICT BOX ─────────────────────────────────────────────────── */
+.verdict-box {
+  border-radius: var(--r12); padding: 24px;
+  border: 2px solid; margin-bottom: 20px;
+}
+.verdict-box.go     { background: var(--green-lt); border-color: #86efac; }
+.verdict-box.caution{ background: var(--amber-lt); border-color: #fcd34d; }
+.verdict-box.nogo   { background: var(--red-lt);   border-color: #fca5a5; }
+.vb-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.vb-icon { font-size: 28px; }
+.vb-title { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
+.vb-desc { font-size: 13px; color: var(--ink2); line-height: 1.6; }
+
+/* ── CHECKLIST ───────────────────────────────────────────────────── */
+.checklist { display: flex; flex-direction: column; gap: 8px; }
+.check-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; }
+.check-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.check-text { font-size: 13px; flex: 1; }
+.check-text strong { display: block; }
+.check-text span { font-size: 12px; color: var(--ink3); }
+
+/* ── PROGRESS METER ──────────────────────────────────────────────── */
+.progress-meter { margin: 12px 0; }
+.pm-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink3); margin-bottom: 5px; }
+.pm-track { height: 10px; background: var(--bg); border-radius: 5px; overflow: hidden; border: 1px solid var(--border); }
+.pm-fill { height: 100%; border-radius: 5px; transition: width 0.5s ease; }
+
+/* ── WATERFALL CHART ─────────────────────────────────────────────── */
+.waterfall { display: flex; flex-direction: column; gap: 8px; }
+.wf-row { display: flex; align-items: center; gap: 10px; }
+.wf-label { font-size: 12px; color: var(--ink2); width: 140px; text-align: right; flex-shrink: 0; }
+.wf-track { flex: 1; height: 22px; position: relative; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.wf-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.wf-val { font-size: 12px; font-weight: 700; width: 90px; flex-shrink: 0; font-feature-settings: 'tnum'; }
+
+/* ── CASHFLOW TABLE ──────────────────────────────────────────────── */
+.cf-chart { display: flex; flex-direction: column; gap: 5px; }
+.cf-row { display: flex; align-items: center; gap: 8px; }
+.cf-mo { font-size: 11px; color: var(--ink3); width: 52px; text-align: right; flex-shrink: 0; }
+.cf-track { flex: 1; height: 14px; background: var(--bg); border-radius: 2px; overflow: hidden; }
+.cf-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+.cf-val { font-size: 11px; font-weight: 600; width: 80px; flex-shrink: 0; font-feature-settings: 'tnum'; }
+
+/* ── TABS ────────────────────────────────────────────────────────── */
+.tab-bar { display: flex; gap: 2px; padding: 4px; background: var(--bg); border-radius: var(--r8); margin-bottom: 16px; width: fit-content; }
+.tab-btn { padding: 6px 14px; border: none; background: none; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 6px; color: var(--ink3); transition: all 0.15s; }
+.tab-btn.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── ASSUMPTION BADGE ────────────────────────────────────────────── */
+.assumption-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--blue-lt); color: var(--blue-dk);
+  border: 1px solid #bfdbfe; border-radius: 4px;
+  font-size: 11px; font-weight: 600; padding: 2px 7px;
+  margin: 2px;
+}
+
+/* ── INFO BOX ────────────────────────────────────────────────────── */
+.info-box {
+  background: var(--blue-lt); border: 1px solid #bfdbfe;
+  border-radius: var(--r8); padding: 12px 14px;
+  font-size: 12px; color: var(--blue-dk);
+  margin-bottom: 14px;
+}
+.warn-box {
+  background: var(--amber-lt); border: 1px solid #fcd34d;
+  border-radius: var(--r8); padding: 12px 14px;
+  font-size: 12px; color: #92400e;
+  margin-bottom: 14px;
+}
+
+/* ── CONTENT PADDING ─────────────────────────────────────────────── */
+.content { padding: 24px 28px; }
+.section-gap { margin-bottom: 28px; }
+
+/* ── REPORT PAGE ─────────────────────────────────────────────────── */
+.report-section { margin-bottom: 24px; }
+.rs-title { font-size: 13px; font-weight: 700; color: var(--ink2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid var(--border); }
+.summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.summary-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.summary-table td:first-child { color: var(--ink2); }
+.summary-table td:last-child { text-align: right; font-weight: 700; font-feature-settings: 'tnum'; }
+.summary-table tr:last-child td { border-bottom: none; }
+.summary-table .total-row td { background: var(--bg); font-weight: 800; font-size: 14px; }
+
+/* ── DIVIDER ─────────────────────────────────────────────────────── */
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+/* ── RESPONSIVE ──────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .g2, .g3, .g4 { grid-template-columns: 1fr; }
+  .mg-3, .mg-4, .mg-6 { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── PRINT ───────────────────────────────────────────────────────── */
+@media print {
+  .app-bar, .sidebar { display: none; }
+  .layout { display: block; }
+  .main { overflow: visible; }
+  .page { display: block !important; }
+  .page-header { break-after: avoid; }
+}
+
+/* LLM estimator mini-table */
+.llm-calc { background: var(--bg); border-radius: var(--r8); padding: 12px; margin-top: 8px; font-size: 12px; }
+.llm-calc-row { display: flex; justify-content: space-between; padding: 3px 0; }
+.llm-calc-row strong { font-feature-settings:'tnum'; }
+
+/* Tooltip */
+[data-tip] { position: relative; cursor: help; }
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: #fff;
+  font-size: 11px; padding: 4px 8px; border-radius: 4px;
+  white-space: nowrap; pointer-events: none; opacity: 0;
+  transition: opacity 0.15s;
+}
+[data-tip]:hover::after { opacity: 1; }
+
+
+/* ── AUTH SCREEN ─────────────────────────────────────────────── */
+.auth-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit;
+}
+.auth-overlay.hidden { display: none; }
+.auth-card {
+  width: 100%; max-width: 420px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r12); padding: 32px; box-shadow: 0 12px 40px rgba(15,25,35,.12);
+}
+.auth-logo { font-size: 28px; font-weight: 800; text-align: center; letter-spacing: -0.5px; margin-bottom: 4px; }
+.auth-logo span { color: var(--blue-mid); }
+.auth-sub { font-size: 12px; color: var(--ink3); text-align: center; margin-bottom: 24px; }
+.auth-tab-bar { display: flex; gap: 0; background: var(--bg); border-radius: var(--r8); padding: 3px; margin-bottom: 20px; }
+.auth-tab { flex: 1; padding: 8px; border: none; background: none; font-size: 13px; font-weight: 600;
+  border-radius: 6px; cursor: pointer; color: var(--ink3); transition: all .15s; text-align: center; }
+.auth-tab.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.auth-form { display: none; }
+.auth-form.active { display: block; }
+.auth-field { margin-bottom: 14px; }
+.auth-field label { display: block; font-size: 12px; font-weight: 600; color: var(--ink2); margin-bottom: 5px; }
+.auth-field input { width: 100%; border: 1px solid var(--border2); border-radius: var(--r8);
+  padding: 9px 12px; font-size: 13px; background: var(--surface); color: var(--ink);
+  outline: none; font-family: inherit; transition: border-color .15s; box-sizing: border-box; }
+.auth-field input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,108,240,.1); }
+.auth-field .field-error { font-size: 11px; color: var(--red); margin-top: 3px; display: none; }
+.auth-field.has-error .field-error { display: block; }
+.auth-field.has-error input { border-color: var(--red); }
+.auth-btn { width: 100%; padding: 10px; border: none; border-radius: var(--r8);
+  font-size: 14px; font-weight: 700; cursor: pointer; transition: all .15s; margin-top: 4px; }
+.auth-btn-primary { background: var(--blue); color: #fff; }
+.auth-btn-primary:hover { background: var(--blue-dk); }
+.auth-error-banner { background: var(--red-lt); color: var(--red); border: 1px solid #fca5a5;
+  border-radius: var(--r8); padding: 10px 14px; font-size: 12px; font-weight: 600;
+  margin-bottom: 14px; display: none; }
+.auth-error-banner.show { display: block; }
+.auth-success-banner { background: var(--green-lt); color: var(--green); border: 1px solid #86efac;
+  border-radius: var(--r8); padding: 10px 14px; font-size: 12px; font-weight: 600;
+  margin-bottom: 14px; display: none; }
+.auth-success-banner.show { display: block; }
+.auth-toggle-text { text-align: center; font-size: 12px; color: var(--ink3); margin-top: 16px; }
+.auth-toggle-text a { color: var(--blue); font-weight: 600; cursor: pointer; text-decoration: none; }
+.auth-toggle-text a:hover { text-decoration: underline; }
+.password-strength { height: 4px; border-radius: 2px; background: var(--bg); margin-top: 6px; overflow: hidden; }
+.password-strength-fill { height: 100%; border-radius: 2px; transition: width .3s, background .3s; width: 0; }
+.password-strength-text { font-size: 10px; color: var(--ink3); margin-top: 2px; }
+
+/* ── USER MENU IN APP BAR ────────────────────────────────────── */
+.user-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--blue);
+  color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center;
+  justify-content: center; cursor: pointer; transition: background .15s; }
+.user-avatar:hover { background: var(--blue-dk); }
+.user-dropdown { display: none; position: absolute; top: calc(100% + 8px); right: 0; width: 200px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r12);
+  box-shadow: 0 8px 24px rgba(15,25,35,.14); z-index: 200; overflow: hidden; }
+.user-dropdown.open { display: block; }
+.ud-header { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.ud-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+.ud-email { font-size: 11px; color: var(--ink3); }
+.ud-item { display: flex; align-items: center; gap: 8px; padding: 9px 14px; font-size: 13px;
+  color: var(--ink2); cursor: pointer; transition: background .12s; border: none; background: none;
+  width: 100%; text-align: left; font-family: inherit; }
+.ud-item:hover { background: var(--bg); }
+.ud-item.danger { color: var(--red); }
+
+/* ── SETTINGS PAGE ───────────────────────────────────────────── */
+.settings-row { display: flex; align-items: center; gap: 10px; padding: 10px 0;
+  border-bottom: 1px solid var(--border); }
+.settings-row:last-child { border-bottom: none; }
+.settings-row-label { flex: 1; }
+.settings-row-label .sr-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+.settings-row-label .sr-desc { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+.settings-actions { display: flex; gap: 10px; margin-top: 20px; }
+
+@media (max-width: 768px) {
+  .settings-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+}
+
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js"></script>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-logo">TC<span>TP</span></div>
+    <div class="auth-sub">Target Cost &middot; Target Profit</div>
+    <div class="auth-error-banner" id="auth-error"></div>
+    <div class="auth-success-banner" id="auth-success"></div>
+    <div class="auth-tab-bar">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Sign in</button>
+      <button class="auth-tab" onclick="switchAuthTab('signup')">Sign up</button>
+    </div>
+    <form class="auth-form active" id="form-login" onsubmit="handleLogin(event)">
+      <div class="auth-field" id="lf-username">
+        <label for="login-username">Username</label>
+        <input type="text" id="login-username" placeholder="Enter your username" required autocomplete="username">
+        <div class="field-error">Username is required</div>
+      </div>
+      <div class="auth-field" id="lf-password">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="Enter your password" required autocomplete="current-password">
+        <div class="field-error">Password is required</div>
+      </div>
+      <button type="submit" class="auth-btn auth-btn-primary">Sign in</button>
+      <div class="auth-toggle-text">Don't have an account? <a onclick="switchAuthTab('signup')">Create one</a></div>
+    </form>
+    <form class="auth-form" id="form-signup" onsubmit="handleSignup(event)">
+      <div class="auth-field" id="sf-fullname">
+        <label for="signup-fullname">Full name</label>
+        <input type="text" id="signup-fullname" placeholder="John Doe">
+        <div class="field-error"></div>
+      </div>
+      <div class="auth-field" id="sf-email">
+        <label for="signup-email">Email address</label>
+        <input type="email" id="signup-email" placeholder="you@example.com" required>
+        <div class="field-error">Please enter a valid email address</div>
+      </div>
+      <div class="auth-field" id="sf-username">
+        <label for="signup-username">Username</label>
+        <input type="text" id="signup-username" placeholder="Choose a username" required autocomplete="username" minlength="3">
+        <div class="field-error">Username must be at least 3 characters</div>
+      </div>
+      <div class="auth-field" id="sf-password">
+        <label for="signup-password">Password</label>
+        <input type="password" id="signup-password" placeholder="Create a password" required minlength="6" oninput="checkPasswordStrength(this.value)" autocomplete="new-password">
+        <div class="field-error">Password must be at least 6 characters</div>
+        <div class="password-strength"><div class="password-strength-fill" id="pw-strength-fill"></div></div>
+        <div class="password-strength-text" id="pw-strength-text"></div>
+      </div>
+      <div class="auth-field" id="sf-confirm">
+        <label for="signup-confirm">Confirm password</label>
+        <input type="password" id="signup-confirm" placeholder="Re-enter your password" required autocomplete="new-password">
+        <div class="field-error">Passwords do not match</div>
+      </div>
+      <button type="submit" class="auth-btn auth-btn-primary">Create account</button>
+      <div class="auth-toggle-text">Already have an account? <a onclick="switchAuthTab('login')">Sign in</a></div>
+    </form>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- ── APP BAR ─────────────────────────────────────────────────── -->
+<div class="app-bar" id="app-bar-main">
+  <div class="app-bar-brand">
+    <div class="app-bar-logo" id="app-logo">TC<span>TP</span></div>
+    <div class="app-bar-sub" id="app-subtitle">Software Financial Simulator</div>
+  </div>
+  <div class="app-bar-right">
+    <div class="live-label"><span class="live-dot"></span> Live calculations</div>
+    <div class="app-bar-badge" id="app-version-badge">v1.0</div>
+    <div style="position:relative" id="user-menu-container">
+      <div class="user-avatar" id="user-avatar" onclick="toggleUserMenu()" title="User menu">?</div>
+      <div class="user-dropdown" id="user-dropdown">
+        <div class="ud-header">
+          <div class="ud-name" id="ud-name">User</div>
+          <div class="ud-email" id="ud-email">user@example.com</div>
+        </div>
+        <button class="ud-item" onclick="showPage('settings'); closeUserMenu();">&#9881; Settings</button>
+        <button class="ud-item danger" onclick="handleLogout()">&#8618; Sign out</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+
+<!-- ── SIDEBAR ────────────────────────────────────────────────── -->
+<div class="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-label">Navigation</div>
+    <div class="nav-item active" onclick="showPage('project')" id="nav-project">
+      <div class="nav-icon">⚙</div> Project setup
+    </div>
+    <div class="nav-item" onclick="showPage('costs')" id="nav-costs">
+      <div class="nav-icon">💸</div> Cost inputs
+      <div class="nav-badge" id="nb-costs">0</div>
+    </div>
+    <div class="nav-item" onclick="showPage('tracking')" id="nav-tracking">
+      <div class="nav-icon">⏱</div> Time tracking
+    </div>
+    <div class="nav-item" onclick="showPage('assumptions')" id="nav-assumptions">
+      <div class="nav-icon">🎯</div> Assumptions
+    </div>
+    <div class="nav-item" onclick="showPage('analysis')" id="nav-analysis">
+      <div class="nav-icon">📊</div> Analysis
+    </div>
+    <div class="nav-item" onclick="showPage('evm')" id="nav-evm">
+      <div class="nav-icon">📈</div> Budget &amp; schedule
+    </div>
+    <div class="nav-item" onclick="showPage('report')" id="nav-report">
+      <div class="nav-icon">📋</div> Report
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Cost categories</div>
+    <div class="cat-nav-item" onclick="showPage('costs'); scrollToCat('labour')">
+      <div class="cat-dot" style="background:var(--cat-labour)"></div>
+      Labour <span style="margin-left:auto;font-size:11px;color:var(--ink3)" id="snb-labour">—</span>
+    </div>
+    <div class="cat-nav-item" onclick="showPage('costs'); scrollToCat('infra')">
+      <div class="cat-dot" style="background:var(--cat-infra)"></div>
+      Cloud / Infra <span style="margin-left:auto;font-size:11px;color:var(--ink3)" id="snb-infra">—</span>
+    </div>
+    <div class="cat-nav-item" onclick="showPage('costs'); scrollToCat('apis')">
+      <div class="cat-dot" style="background:var(--cat-apis)"></div>
+      APIs / SaaS <span style="margin-left:auto;font-size:11px;color:var(--ink3)" id="snb-apis">—</span>
+    </div>
+    <div class="cat-nav-item" onclick="showPage('costs'); scrollToCat('llm')">
+      <div class="cat-dot" style="background:var(--cat-llm)"></div>
+      LLM / AI <span style="margin-left:auto;font-size:11px;color:var(--ink3)" id="snb-llm">—</span>
+    </div>
+    <div class="cat-nav-item" onclick="showPage('costs'); scrollToCat('overhead')">
+      <div class="cat-dot" style="background:var(--cat-overhead)"></div>
+      Overhead <span style="margin-left:auto;font-size:11px;color:var(--ink3)" id="snb-overhead">—</span>
+    </div>
+  </div>
+
+  <div class="sidebar-totals">
+    <div class="st-row"><span class="st-label">One-time costs</span><span class="st-value" id="st-onetime">—</span></div>
+    <div class="st-row"><span class="st-label">Monthly recurring</span><span class="st-value" id="st-monthly">—</span></div>
+    <div class="st-row"><span class="st-label">Per-unit variable</span><span class="st-value" id="st-perunit">—</span></div>
+    <div class="st-row"><span class="st-label">Total project cost</span><span class="st-value" id="st-total">—</span></div>
+  </div>
+</div>
+
+<!-- ── MAIN ────────────────────────────────────────────────────── -->
+<div class="main">
+
+<!-- ══ PAGE: PROJECT SETUP ══════════════════════════════════════ -->
+<div class="page active" id="page-project">
+  <div class="page-header">
+    <div><div class="ph-title">Project setup</div><div class="ph-sub">Configure your project basics — all fields feed into every calculation</div></div>
+    <div class="ph-actions">
+      <button class="btn btn-primary" onclick="showPage('costs')">Next: Cost inputs →</button>
+    </div>
+  </div>
+  <div class="content">
+
+    <div class="card section-gap">
+      <div class="card-header"><div><div class="card-title">Project details</div><div class="card-sub">Core metadata used on the report cover and in all calculations</div></div></div>
+      <div class="form-grid g2">
+        <div class="field">
+          <label class="field-label">Project name</label>
+          <input type="text" id="f-projName" value="AI-Powered Analytics SaaS" oninput="recalcAll()" placeholder="e.g. Customer Intelligence Platform">
+        </div>
+        <div class="field">
+          <label class="field-label">Project description</label>
+          <input type="text" id="f-projDesc" value="B2B SaaS platform with LLM-powered insights" oninput="recalcAll()" placeholder="One-line description">
+        </div>
+        <div class="field">
+          <label class="field-label" data-tip="Development + launch duration. Multiplies all monthly costs.">Development duration (months)</label>
+          <input type="number" id="f-duration" value="12" min="1" max="120" step="1" oninput="recalcAll()">
+          <div class="field-hint">Monthly recurring costs × this number = total recurring spend</div>
+        </div>
+        <div class="field">
+          <label class="field-label">Currency</label>
+          <select id="f-currency" onchange="recalcAll()">
+            <option value="$">USD — US Dollar ($)</option>
+            <option value="£">GBP — British Pound (£)</option>
+            <option value="€">EUR — Euro (€)</option>
+            <option value="₹">INR — Indian Rupee (₹)</option>
+            <option value="A$">AUD — Australian Dollar (A$)</option>
+            <option value="C$">CAD — Canadian Dollar (C$)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Product category</label>
+          <select id="f-prodCat" onchange="recalcAll()">
+            <option value="b2b-saas">B2B SaaS</option>
+            <option value="b2c-saas">B2C SaaS / Consumer app</option>
+            <option value="api-platform">API / Developer platform</option>
+            <option value="marketplace">Marketplace</option>
+            <option value="internal-tool">Internal tool / Enterprise</option>
+            <option value="on-premises">On premises</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Team location</label>
+          <select id="f-teamLoc" onchange="recalcAll()">
+            <option value="uk">United Kingdom</option>
+            <option value="us">United States</option>
+            <option value="eu">Western Europe</option>
+            <option value="eastern-eu">Eastern Europe</option>
+            <option value="india">India</option>
+            <option value="mixed">Mixed / Remote</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card section-gap">
+      <div class="card-header"><div><div class="card-title">Unit definition</div><div class="card-sub">Define what you are selling — this flows into all pricing and volume calculations</div></div></div>
+      <div class="form-grid g3">
+        <div class="field">
+          <label class="field-label">Unit / licence label</label>
+          <input type="text" id="f-unitLabel" value="Seats" oninput="recalcAll()" placeholder="e.g. Seats, Licences, Users">
+          <div class="field-hint">What one sale unit is called throughout the tool</div>
+        </div>
+        <div class="field">
+          <label class="field-label" data-tip="Planned sales volume during the first sales period (e.g. 12 months)">Target volume (units to sell)</label>
+          <input type="number" id="f-targetVol" value="500" min="1" oninput="recalcAll()">
+        </div>
+        <div class="field">
+          <label class="field-label">Sales period (months)</label>
+          <input type="number" id="f-salesPeriod" value="12" min="1" oninput="recalcAll()">
+          <div class="field-hint">Time window to reach target volume</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Current state snapshot</div></div></div>
+      <div class="metric-grid mg-4">
+        <div class="metric-card blue"><div class="mc-label">Project name</div><div class="mc-value" id="snap-name" style="font-size:14px;word-break:break-word">—</div></div>
+        <div class="metric-card"><div class="mc-label">Duration</div><div class="mc-value" id="snap-dur">—</div><div class="mc-sub">months development</div></div>
+        <div class="metric-card"><div class="mc-label">Unit type</div><div class="mc-value" id="snap-unit" style="font-size:14px">—</div></div>
+        <div class="metric-card"><div class="mc-label">Target volume</div><div class="mc-value" id="snap-vol">—</div><div class="mc-sub" id="snap-volsub">—</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ PAGE: COST INPUTS ════════════════════════════════════════ -->
+<div class="page" id="page-costs">
+  <div class="page-header">
+    <div><div class="ph-title">Cost inputs</div><div class="ph-sub">Every line item is live — changes instantly update all downstream calculations</div></div>
+    <div class="ph-actions">
+      <button class="btn btn-secondary" onclick="showPage('project')">← Setup</button>
+      <button class="btn btn-primary" onclick="showPage('assumptions')">Next: Assumptions →</button>
+    </div>
+  </div>
+  <div class="content">
+
+    <div class="info-box">
+      💡 <strong>Cost types explained:</strong> <strong>Monthly</strong> = recurring spend × project duration months &nbsp;|&nbsp; <strong>One-time</strong> = fixed spend paid once &nbsp;|&nbsp; <strong>Per-unit</strong> = variable cost for each unit sold (scales with volume)
+    </div>
+
+    <!-- LABOUR -->
+    <div class="card section-gap" id="cat-labour">
+      <div class="cost-section-header">
+        <div class="csh-left">
+          <div class="csh-icon" style="background:#dbeafe;color:var(--cat-labour)">👷</div>
+          <div><div class="csh-title">Labour &amp; team</div><div class="csh-count" id="cc-labour">0 items</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="csh-total" style="color:var(--cat-labour)" id="ct-labour">—</div>
+        </div>
+      </div>
+      <table class="cost-table" id="tbl-labour">
+        <thead><tr>
+          <th style="width:22%">Role / description</th>
+          <th style="width:11%">Rate basis</th>
+          <th style="width:10%">Rate</th>
+          <th style="width:9%">Hrs/mo (plan)</th>
+          <th style="width:8%">Count</th>
+          <th style="width:11%">Type</th>
+          <th class="r" style="width:13%">Line total</th>
+          <th style="width:11%">Notes</th>
+          <th style="width:5%"></th>
+        </tr></thead>
+        <tbody id="rows-labour"></tbody>
+      </table>
+      <button class="add-row-btn" onclick="addRow('labour')">+ Add team member / role</button>
+      <div class="info-box" style="margin-top:10px">
+        💡 <strong>Rate basis:</strong> choose <strong>Monthly salary</strong> (rate = full monthly cost, hours are for capacity planning only) or <strong>Hourly rate</strong> (rate × planned hours/month = monthly cost). Both feed the same total — switch any resource at any time without breaking calculations.
+      </div>
+    </div>
+
+    <!-- CLOUD INFRA -->
+    <div class="card section-gap" id="cat-infra">
+      <div class="cost-section-header">
+        <div class="csh-left">
+          <div class="csh-icon" style="background:#ccfbf1;color:var(--cat-infra)">☁</div>
+          <div><div class="csh-title">Cloud &amp; infrastructure</div><div class="csh-count" id="cc-infra">0 items</div></div>
+        </div>
+        <div class="csh-total" style="color:var(--cat-infra)" id="ct-infra">—</div>
+      </div>
+      <table class="cost-table" id="tbl-infra">
+        <thead><tr>
+          <th style="width:30%">Service / description</th>
+          <th style="width:13%">Cost / mo</th>
+          <th style="width:10%">Units</th>
+          <th style="width:15%">Type</th>
+          <th class="r" style="width:14%">Line total</th>
+          <th style="width:8%">Notes</th>
+          <th style="width:5%"></th>
+        </tr></thead>
+        <tbody id="rows-infra"></tbody>
+      </table>
+      <button class="add-row-btn" onclick="addRow('infra')">+ Add cloud / infra item</button>
+    </div>
+
+    <!-- APIS -->
+    <div class="card section-gap" id="cat-apis">
+      <div class="cost-section-header">
+        <div class="csh-left">
+          <div class="csh-icon" style="background:#ede9fe;color:var(--cat-apis)">🔌</div>
+          <div><div class="csh-title">APIs &amp; SaaS tools</div><div class="csh-count" id="cc-apis">0 items</div></div>
+        </div>
+        <div class="csh-total" style="color:var(--cat-apis)" id="ct-apis">—</div>
+      </div>
+      <table class="cost-table" id="tbl-apis">
+        <thead><tr>
+          <th style="width:30%">Service / provider</th>
+          <th style="width:13%">Cost / mo</th>
+          <th style="width:10%">Units</th>
+          <th style="width:15%">Type</th>
+          <th class="r" style="width:14%">Line total</th>
+          <th style="width:8%">Notes</th>
+          <th style="width:5%"></th>
+        </tr></thead>
+        <tbody id="rows-apis"></tbody>
+      </table>
+      <button class="add-row-btn" onclick="addRow('apis')">+ Add API / SaaS tool</button>
+    </div>
+
+    <!-- LLM -->
+    <div class="card section-gap" id="cat-llm">
+      <div class="cost-section-header">
+        <div class="csh-left">
+          <div class="csh-icon" style="background:#fef9c3;color:var(--cat-llm)">🤖</div>
+          <div><div class="csh-title">LLM &amp; AI costs</div><div class="csh-count" id="cc-llm">0 items</div></div>
+        </div>
+        <div class="csh-total" style="color:var(--cat-llm)" id="ct-llm">—</div>
+      </div>
+      <div class="info-box" style="margin-top:8px;margin-bottom:0">
+        🧮 <strong>Token estimator:</strong> Use the built-in estimator rows — enter your model and usage, and the monthly cost is auto-calculated. Or enter a known monthly cost directly.
+      </div>
+      <table class="cost-table" id="tbl-llm">
+        <thead><tr>
+          <th style="width:30%">Model / provider</th>
+          <th style="width:13%">Est. cost/mo</th>
+          <th style="width:10%">Units</th>
+          <th style="width:15%">Type</th>
+          <th class="r" style="width:14%">Line total</th>
+          <th style="width:8%">Notes</th>
+          <th style="width:5%"></th>
+        </tr></thead>
+        <tbody id="rows-llm"></tbody>
+      </table>
+      <button class="add-row-btn" onclick="addRow('llm')">+ Add LLM / AI model cost</button>
+    </div>
+
+    <!-- OVERHEAD -->
+    <div class="card section-gap" id="cat-overhead">
+      <div class="cost-section-header">
+        <div class="csh-left">
+          <div class="csh-icon" style="background:#f1f5f9;color:var(--cat-overhead)">🏢</div>
+          <div><div class="csh-title">Overhead &amp; contingency</div><div class="csh-count" id="cc-overhead">0 items</div></div>
+        </div>
+        <div class="csh-total" style="color:var(--cat-overhead)" id="ct-overhead">—</div>
+      </div>
+      <table class="cost-table" id="tbl-overhead">
+        <thead><tr>
+          <th style="width:30%">Item / description</th>
+          <th style="width:13%">Cost</th>
+          <th style="width:10%">Units</th>
+          <th style="width:15%">Type</th>
+          <th class="r" style="width:14%">Line total</th>
+          <th style="width:8%">Notes</th>
+          <th style="width:5%"></th>
+        </tr></thead>
+        <tbody id="rows-overhead"></tbody>
+      </table>
+      <button class="add-row-btn" onclick="addRow('overhead')">+ Add overhead item</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ PAGE: TIME TRACKING ══════════════════════════════════════ -->
+<div class="page" id="page-tracking">
+  <div class="page-header">
+    <div><div class="ph-title">Time tracking</div><div class="ph-sub">Log actual hours per resource per month — compares against planned hours and cost automatically</div></div>
+    <div class="ph-actions">
+      <button class="btn btn-secondary" onclick="showPage('costs')">← Costs</button>
+      <button class="btn btn-primary" onclick="showPage('evm')">Budget &amp; schedule →</button>
+    </div>
+  </div>
+  <div class="content">
+
+    <div class="info-box">
+      💡 <strong>How this works:</strong> for every labour resource, enter the actual hours worked in each month. The system compares this against planned hours (derived from monthly salary ÷ standard hours, or your entered hourly plan) to calculate cost variance and schedule variance — the same method professional project managers use (Earned Value Management).
+    </div>
+
+    <div class="card section-gap">
+      <div class="form-grid g3">
+        <div class="field">
+          <label class="field-label" data-tip="Used to convert monthly salary into an implied hourly rate for variance math">Standard working hours / month</label>
+          <input type="number" id="f-stdHours" value="160" min="1" oninput="recalcAll()">
+          <div class="field-hint">Typically 160–173 hrs (4.33 weeks × 37–40 hrs)</div>
+        </div>
+        <div class="field">
+          <label class="field-label" data-tip="Which month of the project are we currently in — drives Actual vs Planned comparisons">Current month (as of)</label>
+          <input type="number" id="f-currentMonth" value="6" min="1" oninput="recalcAll()">
+          <div class="field-hint">Project month number you're reporting as of</div>
+        </div>
+        <div class="field">
+          <label class="field-label">Planned project duration</label>
+          <input type="text" id="f-durationEcho" value="12 months" readonly style="background:var(--bg);color:var(--ink3)">
+          <div class="field-hint">Synced from Project Setup page</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div><div class="card-title">Monthly actual hours by resource</div><div class="card-sub">Enter actual hours worked each month. Blank = not yet logged (assumed on-plan for future months).</div></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="cost-table" id="tbl-tracking" style="min-width:1100px">
+          <thead><tr id="tracking-header-row">
+            <th style="width:180px;position:sticky;left:0;background:var(--surface);z-index:2">Resource</th>
+            <th style="width:90px">Plan hrs/mo</th>
+          </tr></thead>
+          <tbody id="rows-tracking"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ PAGE: BUDGET & SCHEDULE (EVM) ════════════════════════════ -->
+<div class="page" id="page-evm">
+  <div class="page-header">
+    <div><div class="ph-title">Budget &amp; schedule performance</div><div class="ph-sub">Earned Value Management — where the project actually stands vs. the plan, and where it's heading</div></div>
+    <div class="ph-actions">
+      <button class="btn btn-secondary" onclick="showPage('tracking')">← Time tracking</button>
+      <button class="btn btn-primary" onclick="showPage('report')">View report →</button>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- EVM core metrics -->
+    <div class="metric-grid mg-4 section-gap">
+      <div class="metric-card" id="mc-pv"><div class="mc-label">Planned value (PV)</div><div class="mc-value" id="evm-pv">—</div><div class="mc-sub">Budgeted cost of work scheduled</div></div>
+      <div class="metric-card" id="mc-ev"><div class="mc-label">Earned value (EV)</div><div class="mc-value" id="evm-ev">—</div><div class="mc-sub">Budgeted cost of work done</div></div>
+      <div class="metric-card" id="mc-ac"><div class="mc-label">Actual cost (AC)</div><div class="mc-value" id="evm-ac">—</div><div class="mc-sub">Real cost spent to date</div></div>
+      <div class="metric-card" id="mc-eac"><div class="mc-label">Forecast at completion</div><div class="mc-value" id="evm-eac">—</div><div class="mc-sub" id="evm-eac-sub">EAC — projected final cost</div></div>
+    </div>
+
+    <div class="metric-grid mg-4 section-gap">
+      <div class="metric-card" id="mc-cv"><div class="mc-label">Cost variance (CV)</div><div class="mc-value" id="evm-cv">—</div><div class="mc-sub" id="evm-cv-sub">EV − AC</div></div>
+      <div class="metric-card" id="mc-sv"><div class="mc-label">Schedule variance (SV)</div><div class="mc-value" id="evm-sv">—</div><div class="mc-sub" id="evm-sv-sub">EV − PV</div></div>
+      <div class="metric-card" id="mc-cpi"><div class="mc-label">Cost performance index</div><div class="mc-value" id="evm-cpi">—</div><div class="mc-sub" id="evm-cpi-sub">CPI = EV ÷ AC</div></div>
+      <div class="metric-card" id="mc-spi"><div class="mc-label">Schedule performance index</div><div class="mc-value" id="evm-spi">—</div><div class="mc-sub" id="evm-spi-sub">SPI = EV ÷ PV</div></div>
+    </div>
+
+    <!-- Status verdict -->
+    <div id="evm-status-box" class="section-gap"></div>
+
+    <!-- Quadrant scatter -->
+    <div class="card section-gap">
+      <div class="card-header"><div><div class="card-title">Budget vs. schedule position</div><div class="card-sub">Where your project sits right now — ideal is top-right (under budget, ahead of schedule)</div></div></div>
+      <div id="evm-quadrant" style="display:flex;justify-content:center;padding:10px 0"></div>
+      <div style="display:flex;justify-content:center;gap:20px;font-size:12px;margin-top:8px;color:var(--ink3)">
+        <span>🔴 Over budget</span><span>🟢 Under budget</span><span>⬆ Ahead of schedule</span><span>⬇ Behind schedule</span>
+      </div>
+    </div>
+
+    <!-- Cost trend -->
+    <div class="card section-gap">
+      <div class="card-header"><div><div class="card-title">Planned vs. actual cost curve</div><div class="card-sub">Cumulative spend over project duration — where the lines diverge tells the story</div></div></div>
+      <div id="evm-trend-chart"></div>
+    </div>
+
+    <!-- Resource-level variance table -->
+    <div class="card section-gap">
+      <div class="card-header"><div><div class="card-title">Per-resource variance</div><div class="card-sub">Which roles are driving the overall variance</div></div></div>
+      <div style="overflow-x:auto">
+        <table class="sens-table">
+          <thead><tr>
+            <th>Resource</th>
+            <th class="r">Plan hrs to date</th>
+            <th class="r">Actual hrs to date</th>
+            <th class="r">Planned cost</th>
+            <th class="r">Actual cost</th>
+            <th class="r">Variance</th>
+            <th>Status</th>
+          </tr></thead>
+          <tbody id="evm-resource-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Recommendations to improve cost performance</div><div class="card-sub">Generated live from your current CPI, SPI, and resource variance data</div></div></div>
+      <div id="evm-recommendations"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ PAGE: ASSUMPTIONS ════════════════════════════════════════ -->
+<div class="page" id="page-assumptions">
+  <div class="page-header">
+    <div><div class="ph-title">Assumptions &amp; targets</div><div class="ph-sub">Set your pricing strategy, profit target, and scenario variables</div></div>
+    <div class="ph-actions">
+      <button class="btn btn-secondary" onclick="showPage('costs')">← Costs</button>
+      <button class="btn btn-primary" onclick="showPage('analysis')">Next: Analysis →</button>
+    </div>
+  </div>
+  <div class="content">
+
+    <div class="card section-gap">
+      <div class="card-header"><div><div class="card-title">Pricing strategy</div></div></div>
+      <div class="form-grid g2">
+        <div class="field">
+          <label class="field-label" data-tip="Your desired profit as % of revenue. The selling price is derived from this + cost/unit.">Target profit margin (%)</label>
+          <div class="range-row">
+            <input type="range" id="f-margin" min="1" max="90" step="1" value="35" oninput="recalcAll()">
+            <div class="range-val" id="rv-margin">35%</div>
+          </div>
+          <div class="field-hint">Derived selling price = Cost per unit ÷ (1 – margin%)</div>
+        </div>
+        <div class="field">
+          <label class="field-label">Manual selling price (leave blank to auto-derive)</label>
+          <input type="number" id="f-sellingPrice" placeholder="Auto-calculated from margin" oninput="recalcAll()">
+          <div class="field-hint" id="fh-derived-price">Set above, or override here</div>
+        </div>
+        <div class="field">
+          <label class="field-label" data-tip="Expected monthly revenue growth after launch — e.g. from upsells or new customers">Annual price / volume growth (%)</label>
+          <div class="range-row">
+            <input type="range" id="f-growth" min="0" max="50" step="1" value="10" oninput="recalcAll()">
+            <div class="range-val" id="rv-growth">10%</div>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" data-tip="Monthly customer churn — percentage of customers who cancel each month">Monthly churn rate (%)</label>
+          <div class="range-row">
+            <input type="range" id="f-churn" min="0" max="20" step="0.5" value="3" oninput="recalcAll()">
+            <div class="range-val" id="rv-churn">3%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card section-gap">
+      <div class="card-header"><div><div class="card-title">Scenario volumes</div><div class="card-sub">Three scenarios drive the sensitivity analysis and verdict</div></div></div>
+      <div class="form-grid g3">
+        <div class="field">
+          <label class="field-label">Optimistic volume (units)</label>
+          <input type="number" id="f-volOpt" value="800" oninput="recalcAll()">
+          <div class="field-hint">Best case — strong market uptake</div>
+        </div>
+        <div class="field">
+          <label class="field-label">Base case volume (units)</label>
+          <input type="number" id="f-volBase" value="500" oninput="recalcAll()">
+          <div class="field-hint">Expected — mirrors your target volume</div>
+        </div>
+        <div class="field">
+          <label class="field-label">Pessimistic volume (units)</label>
+          <input type="number" id="f-volPess" value="200" oninput="recalcAll()">
+          <div class="field-hint">Worst case — slow adoption</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card section-gap">
+      <div class="card-header"><div><div class="card-title">Risk buffers</div><div class="card-sub">Applied in worst-case sensitivity scenarios</div></div></div>
+      <div class="form-grid g2">
+        <div class="field">
+          <label class="field-label" data-tip="Added to total cost in overrun scenarios to model risk">Cost overrun buffer (%)</label>
+          <div class="range-row">
+            <input type="range" id="f-costBuffer" min="0" max="50" step="1" value="15" oninput="recalcAll()">
+            <div class="range-val" id="rv-costBuffer">15%</div>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" data-tip="Minimum ROI % required to flag as Go">Minimum ROI threshold (%)</label>
+          <input type="number" id="f-minROI" value="15" min="0" oninput="recalcAll()">
+        </div>
+        <div class="field">
+          <label class="field-label" data-tip="Maximum payback period in months to still flag as Go">Max payback period (months)</label>
+          <input type="number" id="f-maxPayback" value="36" min="1" oninput="recalcAll()">
+        </div>
+        <div class="field">
+          <label class="field-label" data-tip="Minimum gross margin % required to flag as Go">Minimum gross margin (%)</label>
+          <input type="number" id="f-minMargin" value="20" min="0" oninput="recalcAll()">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Live derived outputs from assumptions</div></div></div>
+      <div class="metric-grid mg-4">
+        <div class="metric-card blue"><div class="mc-label">Derived price</div><div class="mc-value" id="ass-price">—</div><div class="mc-sub">per unit sold</div></div>
+        <div class="metric-card"><div class="mc-label">Cost per unit</div><div class="mc-value" id="ass-cpu">—</div><div class="mc-sub">at base volume</div></div>
+        <div class="metric-card green"><div class="mc-label">Target revenue</div><div class="mc-value" id="ass-rev">—</div><div class="mc-sub">base case</div></div>
+        <div class="metric-card purple"><div class="mc-label">Effective churn impact</div><div class="mc-value" id="ass-churn">—</div><div class="mc-sub">units lost / yr</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ PAGE: ANALYSIS ══════════════════════════════════════════ -->
+<div class="page" id="page-analysis">
+  <div class="page-header">
+    <div><div class="ph-title">Analysis</div><div class="ph-sub">Break-even, sensitivity, cash flow — all driven live from your inputs</div></div>
+    <div class="ph-actions">
+      <button class="btn btn-secondary" onclick="showPage('assumptions')">← Assumptions</button>
+      <button class="btn btn-primary" onclick="showPage('report')">View report →</button>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- Key metrics -->
+    <div class="metric-grid mg-3 section-gap" style="margin-bottom:16px">
+      <div class="metric-card blue"><div class="mc-label">Total project cost</div><div class="mc-value" id="an-totalCost">—</div><div class="mc-sub" id="an-totalCostSub">—</div></div>
+      <div class="metric-card"><div class="mc-label">Monthly burn rate</div><div class="mc-value" id="an-burn">—</div><div class="mc-sub">recurring / month</div></div>
+      <div class="metric-card amber"><div class="mc-label">One-time investment</div><div class="mc-value" id="an-onetime">—</div><div class="mc-sub">setup &amp; launch</div></div>
+    </div>
+
+    <div class="metric-grid mg-3 section-gap">
+      <div class="metric-card" id="mc-be"><div class="mc-label">Break-even units</div><div class="mc-value" id="an-beUnits">—</div><div class="mc-sub" id="an-beSub">—</div></div>
+      <div class="metric-card" id="mc-payback"><div class="mc-label">Payback period</div><div class="mc-value" id="an-payback">—</div><div class="mc-sub" id="an-paybackSub">—</div></div>
+      <div class="metric-card" id="mc-roi"><div class="mc-label">Projected ROI</div><div class="mc-value" id="an-roi">—</div><div class="mc-sub" id="an-roiSub">—</div></div>
+      <div class="metric-card" id="mc-gm"><div class="mc-label">Gross margin</div><div class="mc-value" id="an-gm">—</div><div class="mc-sub" id="an-gmSub">—</div></div>
+      <div class="metric-card" id="mc-berev"><div class="mc-label">Break-even revenue</div><div class="mc-value" id="an-beRev">—</div><div class="mc-sub">to recover all costs</div></div>
+      <div class="metric-card purple"><div class="mc-label">Net profit at target</div><div class="mc-value" id="an-netProfit">—</div><div class="mc-sub">base case</div></div>
+    </div>
+
+    <!-- Progress meter -->
+    <div class="card section-gap">
+      <div class="card-title" style="margin-bottom:12px">Break-even progress — target volume vs. required units</div>
+      <div class="progress-meter">
+        <div class="pm-row"><span>0</span><span id="pm-be-label">BE: — units</span><span id="pm-target-label">Target: — units</span></div>
+        <div class="pm-track"><div class="pm-fill" id="pm-fill" style="width:0%;background:var(--green)"></div></div>
+      </div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:6px" id="pm-desc">Enter costs and targets to see break-even progress</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="showTab('cost-breakdown',this)">Cost breakdown</button>
+      <button class="tab-btn" onclick="showTab('sensitivity',this)">Sensitivity</button>
+      <button class="tab-btn" onclick="showTab('cashflow',this)">Cash flow</button>
+      <button class="tab-btn" onclick="showTab('waterfall',this)">Margin waterfall</button>
+    </div>
+
+    <!-- Cost breakdown -->
+    <div class="tab-panel active" id="tab-cost-breakdown">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:14px">Cost by category</div>
+        <div class="bar-chart" id="cost-bar-chart"></div>
+        <div class="divider"></div>
+        <div id="cost-breakdown-table"></div>
+      </div>
+    </div>
+
+    <!-- Sensitivity -->
+    <div class="tab-panel" id="tab-sensitivity">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:14px">Sensitivity analysis — 10 scenarios</div>
+        <div style="overflow-x:auto">
+          <table class="sens-table">
+            <thead><tr>
+              <th>Scenario</th>
+              <th class="r">BE units</th>
+              <th class="r">Revenue needed</th>
+              <th class="r">ROI</th>
+              <th class="r">Payback</th>
+              <th>Verdict</th>
+            </tr></thead>
+            <tbody id="sens-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cash flow -->
+    <div class="tab-panel" id="tab-cashflow">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:14px">Cumulative cash flow — 24 months</div>
+        <div class="cf-chart" id="cf-chart"></div>
+      </div>
+    </div>
+
+    <!-- Waterfall -->
+    <div class="tab-panel" id="tab-waterfall">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:14px">Revenue to profit waterfall</div>
+        <div class="waterfall" id="wf-chart"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ PAGE: REPORT ════════════════════════════════════════════ -->
+<div class="page" id="page-report">
+  <div class="page-header">
+    <div><div class="ph-title">Financial report</div><div class="ph-sub">Live report — every number updates in real time as you change any input</div></div>
+    <div class="ph-actions" style="position:relative">
+      <button class="btn btn-secondary" onclick="showPage('analysis')">← Analysis</button>
+      <div style="position:relative;display:inline-block">
+        <button class="btn btn-primary" onclick="toggleExportMenu()" id="export-menu-btn">⬇ Export ▾</button>
+        <div id="export-menu" class="export-menu">
+          <div class="export-menu-item" onclick="exportExcel()">
+            <span class="export-icon" style="background:#e8f5e9;color:#1d7a3c">XLS</span>
+            <div><div class="export-item-title">Excel workbook</div><div class="export-item-sub">6 sheets, live formulas</div></div>
+          </div>
+          <div class="export-menu-item" onclick="exportPPTX()">
+            <span class="export-icon" style="background:#fde8e8;color:#c0392b">PPT</span>
+            <div><div class="export-item-title">PowerPoint deck</div><div class="export-item-sub">7-slide executive summary</div></div>
+          </div>
+          <div class="export-menu-item" onclick="exportPDF()">
+            <span class="export-icon" style="background:#e8eefd;color:#2952cc">PDF</span>
+            <div><div class="export-item-title">PDF report</div><div class="export-item-sub">Print-ready, 6 pages</div></div>
+          </div>
+          <div class="export-menu-item" onclick="exportJSON()">
+            <span class="export-icon" style="background:#f1f1f1;color:#555">{ }</span>
+            <div><div class="export-item-title">Raw data (JSON)</div><div class="export-item-sub">For re-import or backup</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="export-status" class="export-status" style="display:none"></div>
+  <div class="content">
+
+    <!-- VERDICT -->
+    <div id="report-verdict" class="section-gap"></div>
+
+    <!-- DECISION CHECKLIST -->
+    <div class="card section-gap">
+      <div class="card-title" style="margin-bottom:12px">Decision checklist — 4 mandatory financial tests</div>
+      <div class="checklist" id="report-checklist"></div>
+    </div>
+
+    <!-- SUMMARY TABLE -->
+    <div class="card section-gap">
+      <div class="report-section">
+        <div class="rs-title">Project summary</div>
+        <table class="summary-table" id="report-summary-table"></table>
+      </div>
+    </div>
+
+    <!-- COST BREAKDOWN -->
+    <div class="card section-gap">
+      <div class="report-section">
+        <div class="rs-title">Cost breakdown by category</div>
+        <table class="summary-table" id="report-cost-table"></table>
+      </div>
+    </div>
+
+    <!-- KEY FORMULAS -->
+    <div class="card section-gap">
+      <div class="report-section">
+        <div class="rs-title">Key formulas used</div>
+        <table class="summary-table">
+          <tr><td>Total project cost</td><td>One-time costs + (Monthly recurring × Duration months)</td></tr>
+          <tr><td>Cost per unit</td><td>Total project cost ÷ Target volume + Variable cost per unit</td></tr>
+          <tr><td>Derived selling price</td><td>Cost per unit ÷ (1 − Target margin %)</td></tr>
+          <tr><td>Break-even units</td><td>Total fixed costs ÷ (Selling price − Variable cost per unit)</td></tr>
+          <tr><td>Gross margin</td><td>(Selling price − Cost per unit) ÷ Selling price × 100</td></tr>
+          <tr><td>Payback period</td><td>Total one-time costs ÷ Monthly net profit</td></tr>
+          <tr><td>Projected ROI</td><td>(Target revenue − Total cost) ÷ Total cost × 100</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ASSUMPTIONS LOG -->
+    <div class="card section-gap">
+      <div class="report-section">
+        <div class="rs-title">Assumptions log</div>
+        <div id="report-assumptions" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      </div>
+    </div>
+
+    <!-- ALL LINE ITEMS -->
+    <div class="card">
+      <div class="report-section">
+        <div class="rs-title">Full cost line items</div>
+        <table class="summary-table" id="report-line-items"></table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// DATA STATE
+// ═══════════════════════════════════════════════════════════════════
+let rowIdCounter = 0;
+
+const CATS = ['labour','infra','apis','llm','overhead'];
+let CAT_COLORS = {
+  labour:   '#1a6cf0',
+  infra:    '#0ea8a8',
+  apis:     '#7c3aed',
+  llm:      '#d97706',
+  overhead: '#6b7280'
+};
+let CAT_LABELS = {
+  labour: 'Labour & team',
+  infra: 'Cloud / infra',
+  apis: 'APIs / SaaS',
+  llm: 'LLM / AI',
+  overhead: 'Overhead'
+};
+
+// rows[cat] = [{ id, desc, rate, qty, type, notes, rateBasis, plannedHours }]
+const rows = { labour:[], infra:[], apis:[], llm:[], overhead:[] };
+
+// actualHours[resourceId] = { 1: hrs, 2: hrs, ... } keyed by project month number
+let actualHours = {};
+// MAX_TRACK_MONTHS is now set by settings
+let MAX_TRACK_MONTHS = 24;
+let lastTrackedDuration = null;
+
+// ═══════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('nav-'+id)?.classList.add('active');
+  recalcAll();
+}
+
+function scrollToCat(cat) {
+  const el = document.getElementById('cat-'+cat);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ROW MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════
+function addRow(cat, data = {}) {
+  const id = 'r' + (++rowIdCounter);
+  const row = {
+    id,
+    desc:  data.desc  || '',
+    rate:  data.rate  !== undefined ? data.rate  : 0,
+    qty:   data.qty   !== undefined ? data.qty   : 1,
+    type:  data.type  || 'monthly',
+    notes: data.notes || '',
+    rateBasis:     data.rateBasis     || 'monthly',  // 'monthly' | 'hourly' — labour only
+    plannedHours:  data.plannedHours !== undefined ? data.plannedHours : 160, // hrs/mo — labour only
+  };
+  rows[cat].push(row);
+  renderRow(cat, row);
+  if (cat === 'labour') {
+    const tbody = document.getElementById('rows-tracking');
+    if (tbody) renderTrackingRow(row);
+  }
+  recalcAll();
+}
+
+function renderRow(cat, row) {
+  const tbody = document.getElementById('rows-'+cat);
+  const tr = document.createElement('tr');
+  tr.id = 'tr-' + row.id;
+  tr.setAttribute('data-cat', cat);
+  tr.setAttribute('data-id', row.id);
+
+  const typeOpts = `
+    <option value="monthly"  ${row.type==='monthly' ?'selected':''}>Monthly</option>
+    <option value="onetime"  ${row.type==='onetime' ?'selected':''}>One-time</option>
+    <option value="perunit"  ${row.type==='perunit' ?'selected':''}>Per-unit</option>
+  `;
+
+  if (cat === 'labour') {
+    const basisOpts = `
+      <option value="monthly" ${row.rateBasis==='monthly'?'selected':''}>Monthly salary</option>
+      <option value="hourly"  ${row.rateBasis==='hourly' ?'selected':''}>Hourly rate</option>
+    `;
+    tr.innerHTML = `
+      <td><input type="text" value="${esc(row.desc)}" placeholder="Role / description"
+        oninput="updateRowField('${cat}','${row.id}','desc',this.value); syncTrackingLabel('${row.id}',this.value)"></td>
+      <td><select onchange="updateRowField('${cat}','${row.id}','rateBasis',this.value)">${basisOpts}</select></td>
+      <td><input type="number" value="${row.rate}" min="0" step="0.01"
+        style="text-align:right"
+        oninput="updateRowField('${cat}','${row.id}','rate',parseFloat(this.value)||0)"></td>
+      <td><input type="number" value="${row.plannedHours}" min="0" step="1"
+        style="text-align:right"
+        oninput="updateRowField('${cat}','${row.id}','plannedHours',parseFloat(this.value)||0)"></td>
+      <td><input type="number" value="${row.qty}" min="0.01" step="0.01"
+        style="text-align:right"
+        oninput="updateRowField('${cat}','${row.id}','qty',parseFloat(this.value)||1)"></td>
+      <td><select onchange="updateRowField('${cat}','${row.id}','type',this.value)">${typeOpts}</select></td>
+      <td class="r row-total" id="rtot-${row.id}">—</td>
+      <td><input type="text" value="${esc(row.notes)}" placeholder="Optional"
+        oninput="updateRowField('${cat}','${row.id}','notes',this.value)"></td>
+      <td style="text-align:center">
+        <button class="btn btn-xs btn-danger" onclick="deleteRow('${cat}','${row.id}')" title="Remove">✕</button>
+      </td>
+    `;
+  } else {
+    tr.innerHTML = `
+      <td><input type="text" value="${esc(row.desc)}" placeholder="Description"
+        oninput="updateRowField('${cat}','${row.id}','desc',this.value)"></td>
+      <td><input type="number" value="${row.rate}" min="0" step="0.01"
+        style="text-align:right"
+        oninput="updateRowField('${cat}','${row.id}','rate',parseFloat(this.value)||0)"></td>
+      <td><input type="number" value="${row.qty}" min="0.01" step="0.01"
+        style="text-align:right"
+        oninput="updateRowField('${cat}','${row.id}','qty',parseFloat(this.value)||1)"></td>
+      <td><select onchange="updateRowField('${cat}','${row.id}','type',this.value)">${typeOpts}</select></td>
+      <td class="r row-total" id="rtot-${row.id}">—</td>
+      <td><input type="text" value="${esc(row.notes)}" placeholder="Optional"
+        oninput="updateRowField('${cat}','${row.id}','notes',this.value)"></td>
+      <td style="text-align:center">
+        <button class="btn btn-xs btn-danger" onclick="deleteRow('${cat}','${row.id}')" title="Remove">✕</button>
+      </td>
+    `;
+  }
+  tbody.appendChild(tr);
+}
+
+function updateRowField(cat, id, field, val) {
+  const row = rows[cat].find(r => r.id === id);
+  if (row) { row[field] = val; recalcAll(); }
+}
+
+function deleteRow(cat, id) {
+  rows[cat] = rows[cat].filter(r => r.id !== id);
+  const tr = document.getElementById('tr-'+id);
+  if (tr) tr.remove();
+  if (cat === 'labour') {
+    delete actualHours[id];
+    const trackTr = document.getElementById('track-tr-'+id);
+    if (trackTr) trackTr.remove();
+  }
+  recalcAll();
+}
+
+// ── TIME TRACKING TABLE RENDERING ──────────────────────────────────
+function renderTrackingHeader() {
+  const headerRow = document.getElementById('tracking-header-row');
+  if (!headerRow) return;
+  const duration = getNum('f-duration', 12);
+  const monthsToShow = Math.min(Math.max(duration, 1), MAX_TRACK_MONTHS);
+  // Rebuild header: Resource | Plan hrs/mo | Mo1 | Mo2 | ... | Total actual | Variance
+  let html = `<th style="width:180px;position:sticky;left:0;background:var(--surface);z-index:2">Resource</th>
+    <th style="width:90px">Plan hrs/mo</th>`;
+  for (let m = 1; m <= monthsToShow; m++) {
+    html += `<th style="width:64px;text-align:center">M${m}</th>`;
+  }
+  html += `<th style="width:90px;text-align:right">Total actual</th>
+    <th style="width:90px;text-align:right">Plan to date</th>
+    <th style="width:80px;text-align:center">Variance</th>`;
+  headerRow.innerHTML = html;
+}
+
+function renderTrackingRow(row) {
+  const tbody = document.getElementById('rows-tracking');
+  if (!tbody) return;
+  if (!actualHours[row.id]) actualHours[row.id] = {};
+
+  const duration = getNum('f-duration', 12);
+  const monthsToShow = Math.min(Math.max(duration, 1), MAX_TRACK_MONTHS);
+
+  const tr = document.createElement('tr');
+  tr.id = 'track-tr-' + row.id;
+  tr.setAttribute('data-id', row.id);
+
+  let html = `<td style="position:sticky;left:0;background:var(--surface);font-weight:600" id="track-label-${row.id}">${esc(row.desc) || '(unnamed role)'}</td>
+    <td class="r" id="track-plan-${row.id}" style="color:var(--ink3)">—</td>`;
+
+  for (let m = 1; m <= monthsToShow; m++) {
+    const val = actualHours[row.id][m] !== undefined ? actualHours[row.id][m] : '';
+    html += `<td><input type="number" min="0" step="1" value="${val}" placeholder="—"
+      style="text-align:center;width:56px"
+      oninput="updateActualHours('${row.id}',${m},this.value)"></td>`;
+  }
+
+  html += `<td class="r" id="track-total-${row.id}" style="font-weight:700">—</td>
+    <td class="r" id="track-todate-${row.id}" style="color:var(--ink3)">—</td>
+    <td style="text-align:center" id="track-status-${row.id}">—</td>`;
+
+  tr.innerHTML = html;
+  tbody.appendChild(tr);
+}
+
+function rebuildTrackingTable() {
+  renderTrackingHeader();
+  const tbody = document.getElementById('rows-tracking');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  rows.labour.forEach(row => renderTrackingRow(row));
+}
+
+function updateActualHours(resourceId, month, val) {
+  if (!actualHours[resourceId]) actualHours[resourceId] = {};
+  const num = parseFloat(val);
+  if (val === '' || isNaN(num)) {
+    delete actualHours[resourceId][month];
+  } else {
+    actualHours[resourceId][month] = num;
+  }
+  recalcAll();
+}
+
+function syncTrackingLabel(resourceId, name) {
+  const el = document.getElementById('track-label-'+resourceId);
+  if (el) el.textContent = name || '(unnamed role)';
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CORE CALCULATIONS
+// ═══════════════════════════════════════════════════════════════════
+function getNum(id, def = 0) {
+  const el = document.getElementById(id);
+  if (!el) return def;
+  const v = parseFloat(el.value);
+  return isNaN(v) ? def : v;
+}
+function getStr(id, def = '') {
+  const el = document.getElementById(id);
+  return el ? (el.value || def) : def;
+}
+
+function computeRowTotal(row, duration) {
+  const rate = parseFloat(row.rate) || 0;
+  const qty  = parseFloat(row.qty)  || 1;
+  if (row.type === 'monthly') {
+    const monthlyCost = getRowMonthlyCost(row);
+    return monthlyCost * qty * duration;
+  }
+  if (row.type === 'onetime')  return rate * qty;
+  if (row.type === 'perunit')  return 0; // counted separately
+  return 0;
+}
+
+// Resolves a labour row's effective monthly cost regardless of rate basis.
+// Monthly salary basis: rate IS the monthly cost.
+// Hourly basis: rate × plannedHours/month = monthly cost.
+// Non-labour categories always use rate directly (rateBasis is unused).
+function getRowMonthlyCost(row) {
+  const rate = parseFloat(row.rate) || 0;
+  if (row.rateBasis === 'hourly') {
+    const hrs = parseFloat(row.plannedHours) || 0;
+    return rate * hrs;
+  }
+  return rate; // monthly basis or non-labour category
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// EARNED VALUE MANAGEMENT (EVM) ENGINE
+// ═══════════════════════════════════════════════════════════════════
+// PV (Planned Value)  = budgeted cost of work that SHOULD be done by current month
+// EV (Earned Value)    = budgeted cost of work ACTUALLY done by current month (here: actual hours × planned rate)
+// AC (Actual Cost)     = real cost incurred for hours actually worked (actual hours × rate)
+// CV = EV − AC   (negative = over budget)
+// SV = EV − PV   (negative = behind schedule)
+// CPI = EV / AC  (>1 = under budget, <1 = over budget)
+// SPI = EV / PV  (>1 = ahead of schedule, <1 = behind schedule)
+// EAC = AC + (BAC − EV) / CPI   (forecast total cost at completion)
+function computeEVM(d) {
+  const duration     = d.duration;
+  const currentMonth = Math.min(getNum('f-currentMonth', 1), duration);
+  const stdHours      = getNum('f-stdHours', 160);
+
+  let PV = 0, EV = 0, AC = 0;
+  let BAC = 0; // Budget at completion (total planned labour cost across full duration)
+
+  const perResource = [];
+
+  rows.labour.forEach(row => {
+    const rate = parseFloat(row.rate) || 0;
+    const qty  = parseFloat(row.qty)  || 1;
+    const plannedHoursPerMonth = row.rateBasis === 'hourly'
+      ? (parseFloat(row.plannedHours) || 0)
+      : stdHours; // for monthly-salary resources, assume standard hours as the "planned" baseline
+    const monthlyCost = getRowMonthlyCost(row); // full planned cost per month for this resource
+    const impliedHourlyRate = plannedHoursPerMonth > 0 ? monthlyCost / plannedHoursPerMonth : 0;
+
+    let resPV = 0, resEV = 0, resAC = 0, planHoursToDate = 0, actualHoursToDate = 0;
+
+    for (let m = 1; m <= duration; m++) {
+      const plannedHrsThisMonth = plannedHoursPerMonth;
+      const isPast = m <= currentMonth;
+
+      // Planned value accrues every month up to current month regardless of actuals
+      if (isPast) {
+        resPV += monthlyCost * qty;
+        planHoursToDate += plannedHrsThisMonth * qty;
+      }
+
+      if (isPast) {
+        const actualHrs = actualHours[row.id] && actualHours[row.id][m] !== undefined
+          ? actualHours[row.id][m]
+          : plannedHrsThisMonth; // unlogged past months assumed on-plan
+        actualHoursToDate += actualHrs * qty;
+
+        // % of this month's planned work actually completed. Hours worked is our best
+        // available proxy for progress: working fewer hours than planned means less of
+        // the month's scope got done (schedule slip); working more hours doesn't earn
+        // MORE value than was scoped — it just means it cost more to deliver the same
+        // scope (cost overrun). Capped at 100% — you can't out-earn the month's scope.
+        const pctComplete = plannedHrsThisMonth > 0 ? Math.min(actualHrs / plannedHrsThisMonth, 1.0) : 1.0;
+        resEV += monthlyCost * qty * pctComplete;
+
+        // Actual cost = actual hours actually worked × implied hourly rate — this is
+        // what really varies when someone works more or fewer hours than planned,
+        // and is what diverges from EV to produce a genuine CPI signal.
+        resAC += impliedHourlyRate * actualHrs * qty;
+      }
+    }
+
+    BAC += monthlyCost * qty * duration;
+
+    PV += resPV;
+    EV += resEV;
+    AC += resAC;
+
+    const variance = resEV - resAC;
+    const status = variance >= 0 ? 'good' : (variance >= -resPV * 0.1 ? 'warn' : 'bad');
+
+    perResource.push({
+      id: row.id,
+      desc: row.desc || '(unnamed role)',
+      planHoursToDate, actualHoursToDate,
+      plannedCost: resPV, actualCost: resAC, earnedValue: resEV,
+      variance, status
+    });
+
+    // Update tracking page live cells
+    const planEl   = document.getElementById('track-plan-'+row.id);
+    const totalEl   = document.getElementById('track-total-'+row.id);
+    const todateEl  = document.getElementById('track-todate-'+row.id);
+    const statusEl  = document.getElementById('track-status-'+row.id);
+    if (planEl)  planEl.textContent = plannedHoursPerMonth + ' hrs';
+    if (totalEl) totalEl.textContent = Math.round(actualHoursToDate) + ' hrs';
+    if (todateEl) todateEl.textContent = Math.round(planHoursToDate) + ' hrs';
+    if (statusEl) {
+      const diff = actualHoursToDate - planHoursToDate;
+      const pct = planHoursToDate > 0 ? Math.round(diff/planHoursToDate*100) : 0;
+      statusEl.innerHTML = diff === 0 ? '<span style="color:var(--ink3)">On plan</span>'
+        : diff > 0 ? `<span style="color:var(--red)">+${pct}%</span>`
+        : `<span style="color:var(--green)">${pct}%</span>`;
+    }
+  });
+
+  const CV  = EV - AC;
+  const SV  = EV - PV;
+  const CPI = AC > 0 ? EV / AC : 1;
+  const SPI = PV > 0 ? EV / PV : 1;
+  const EAC = CPI > 0 ? AC + (BAC - EV) / CPI : BAC;
+  const ETC = EAC - AC; // estimate to complete
+  const VAC = BAC - EAC; // variance at completion
+
+  // Non-labour costs (assumed to track on-plan since we don't track hours for them)
+  const nonLabourTotal = CATS.filter(cat => cat !== 'labour').reduce((s, cat) => s + d.catTotals[cat].total, 0);
+  const projectedTotalCost = EAC + nonLabourTotal;
+  const originalTotalCost  = BAC + nonLabourTotal;
+
+  return {
+    currentMonth, duration, stdHours,
+    PV, EV, AC, BAC, EAC, ETC, VAC, CV, SV, CPI, SPI,
+    perResource, nonLabourTotal, projectedTotalCost, originalTotalCost
+  };
+}
+
+function renderEVMPage(d, c) {
+  const evm = computeEVM(d);
+
+  setText('evm-pv', fmtFull(c, evm.PV));
+  setText('evm-ev', fmtFull(c, evm.EV));
+  setText('evm-ac', fmtFull(c, evm.AC));
+  setText('evm-eac', fmt(c, evm.projectedTotalCost));
+  setText('evm-eac-sub', 'vs. original plan: ' + fmtFull(c, evm.originalTotalCost));
+
+  setText('evm-cv', (evm.CV>=0?'+':'') + fmtFull(c, evm.CV));
+  setText('evm-sv', (evm.SV>=0?'+':'') + fmtFull(c, evm.SV));
+  setText('evm-cpi', evm.CPI.toFixed(2));
+  setText('evm-spi', evm.SPI.toFixed(2));
+  setText('evm-cv-sub', evm.CV >= 0 ? 'Under budget' : 'Over budget');
+  setText('evm-sv-sub', evm.SV >= 0 ? 'Ahead of schedule' : 'Behind schedule');
+  setText('evm-cpi-sub', evm.CPI >= 1 ? 'Efficient spending' : 'Inefficient spending');
+  setText('evm-spi-sub', evm.SPI >= 1 ? 'Ahead of plan' : 'Falling behind');
+
+  setMetricCard('mc-cv',  evm.CV  >= 0 ? 'green' : 'red');
+  setMetricCard('mc-sv',  evm.SV  >= 0 ? 'green' : 'red');
+  setMetricCard('mc-cpi', evm.CPI >= 1 ? 'green' : evm.CPI >= 0.9 ? 'amber' : 'red');
+  setMetricCard('mc-spi', evm.SPI >= 1 ? 'green' : evm.SPI >= 0.9 ? 'amber' : 'red');
+  setMetricCard('mc-pv', 'blue');
+  setMetricCard('mc-ev', 'teal');
+  setMetricCard('mc-ac', evm.AC <= evm.PV ? 'green' : 'amber');
+  setMetricCard('mc-eac', evm.projectedTotalCost <= evm.originalTotalCost ? 'green' : 'red');
+
+  const statusEl = document.getElementById('evm-status-box');
+  if (statusEl) {
+    const budgetOk = evm.CPI >= 1;
+    const scheduleOk = evm.SPI >= 1;
+    let cls, icon, title, desc;
+    if (budgetOk && scheduleOk) {
+      cls='go'; icon='✅'; title='On track — under budget and ahead of schedule';
+      desc = `At month ${evm.currentMonth} of ${evm.duration}, the project is performing well. CPI of ${evm.CPI.toFixed(2)} means every ${c}1 spent is delivering ${c}${evm.CPI.toFixed(2)} of planned value. Forecast final cost: ${fmtFull(c,evm.projectedTotalCost)} vs. original budget of ${fmtFull(c,evm.originalTotalCost)}.`;
+    } else if (!budgetOk && !scheduleOk) {
+      cls='nogo'; icon='❌'; title='Critical — over budget and behind schedule';
+      desc = `At month ${evm.currentMonth} of ${evm.duration}, the project is both overspending and falling behind. At this rate, forecast final cost is ${fmtFull(c,evm.projectedTotalCost)} — ${fmtFull(c,Math.abs(evm.VAC))} ${evm.VAC<0?'over':'under'} the original ${fmtFull(c,evm.originalTotalCost)} budget. Immediate corrective action recommended.`;
+    } else if (!budgetOk) {
+      cls='caution'; icon='⚠️'; title='Over budget — but on or ahead of schedule';
+      desc = `Work is progressing on schedule (SPI ${evm.SPI.toFixed(2)}) but costing more than planned (CPI ${evm.CPI.toFixed(2)}). Forecast final cost: ${fmtFull(c,evm.projectedTotalCost)}, which is ${fmtFull(c,Math.abs(evm.VAC))} over the original budget.`;
+    } else {
+      cls='caution'; icon='⚠️'; title='Behind schedule — but within budget';
+      desc = `Spending is under control (CPI ${evm.CPI.toFixed(2)}) but progress is slower than planned (SPI ${evm.SPI.toFixed(2)}). Consider whether resourcing needs to increase to hit the ${evm.duration}-month target.`;
+    }
+    statusEl.innerHTML = `<div class="verdict-box ${cls}">
+      <div class="vb-head"><div class="vb-icon">${icon}</div><div class="vb-title">${title}</div></div>
+      <div class="vb-desc">${desc}</div>
+    </div>`;
+  }
+
+  renderEVMQuadrant(evm, c);
+  renderEVMTrend(d, evm, c);
+
+  const tbody = document.getElementById('evm-resource-tbody');
+  if (tbody) {
+    if (evm.perResource.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--ink3);padding:20px">No labour resources yet — add team members in Cost Inputs</td></tr>`;
+    } else {
+      tbody.innerHTML = evm.perResource.map(r => {
+        const statusLabel = r.status === 'good' ? 'On/under budget' : r.status === 'warn' ? 'Slightly over' : 'Significantly over';
+        const statusColor = r.status === 'good' ? 'go' : r.status === 'warn' ? 'caution' : 'nogo';
+        return `<tr>
+          <td style="font-weight:600">${esc(r.desc)}</td>
+          <td class="r">${Math.round(r.planHoursToDate)} hrs</td>
+          <td class="r">${Math.round(r.actualHoursToDate)} hrs</td>
+          <td class="r">${fmtFull(c, r.plannedCost)}</td>
+          <td class="r">${fmtFull(c, r.actualCost)}</td>
+          <td class="r" style="color:${r.variance>=0?'var(--green)':'var(--red)'};font-weight:700">${r.variance>=0?'+':''}${fmtFull(c, r.variance)}</td>
+          <td><span class="verdict-pill vp-${statusColor}">${statusLabel}</span></td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  renderEVMRecommendations(evm, d, c);
+  return evm;
+}
+
+function renderEVMQuadrant(evm, c) {
+  const el = document.getElementById('evm-quadrant');
+  if (!el) return;
+
+  const cvPct = evm.PV > 0 ? Math.max(-50, Math.min(50, (evm.CV / evm.PV) * 100)) : 0;
+  const svPct = evm.PV > 0 ? Math.max(-50, Math.min(50, (evm.SV / evm.PV) * 100)) : 0;
+
+  const size = 320;
+  const cx = size/2, cy = size/2;
+  const px = cx + (cvPct/50) * (size/2 - 30);
+  const py = cy - (svPct/50) * (size/2 - 30);
+
+  const dotColor = (cvPct>=0 && svPct>=0) ? '#16a34a' : (cvPct<0 && svPct<0) ? '#dc2626' : '#d97706';
+
+  el.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <rect x="0" y="0" width="${size/2}" height="${size/2}" fill="#fef3c7" opacity="0.4"/>
+    <rect x="${size/2}" y="0" width="${size/2}" height="${size/2}" fill="#dcfce7" opacity="0.4"/>
+    <rect x="0" y="${size/2}" width="${size/2}" height="${size/2}" fill="#fee2e2" opacity="0.4"/>
+    <rect x="${size/2}" y="${size/2}" width="${size/2}" height="${size/2}" fill="#fef3c7" opacity="0.4"/>
+    <line x1="0" y1="${cy}" x2="${size}" y2="${cy}" stroke="#c5d0da" stroke-width="1.5"/>
+    <line x1="${cx}" y1="0" x2="${cx}" y2="${size}" stroke="#c5d0da" stroke-width="1.5"/>
+    <text x="${size-6}" y="${cy-8}" font-size="10" fill="#7a8fa0" text-anchor="end">Under budget →</text>
+    <text x="6" y="${cy-8}" font-size="10" fill="#7a8fa0" text-anchor="start">← Over budget</text>
+    <text x="${cx+6}" y="14" font-size="10" fill="#7a8fa0">Ahead of schedule ↑</text>
+    <text x="${cx+6}" y="${size-8}" font-size="10" fill="#7a8fa0">↓ Behind schedule</text>
+    <circle cx="${px}" cy="${py}" r="10" fill="${dotColor}" opacity="0.25"/>
+    <circle cx="${px}" cy="${py}" r="6" fill="${dotColor}" stroke="#fff" stroke-width="2"/>
+    <text x="${px}" y="${py-16}" font-size="11" font-weight="700" fill="${dotColor}" text-anchor="middle">You are here</text>
+  </svg>`;
+}
+
+function renderEVMTrend(d, evm, c) {
+  const el = document.getElementById('evm-trend-chart');
+  if (!el) return;
+
+  const duration = evm.duration;
+  const stdHours = evm.stdHours;
+
+  let cumPlanned = 0, cumActual = 0;
+  const points = [];
+  for (let m = 1; m <= duration; m++) {
+    let monthPlan = 0, monthActual = 0;
+    rows.labour.forEach(row => {
+      const qty = parseFloat(row.qty) || 1;
+      const monthlyCost = getRowMonthlyCost(row);
+      const plannedHrs = row.rateBasis === 'hourly' ? (parseFloat(row.plannedHours)||0) : stdHours;
+      const impliedRate = plannedHrs > 0 ? monthlyCost / plannedHrs : 0;
+      monthPlan += monthlyCost * qty;
+      if (m <= evm.currentMonth) {
+        const actualHrs = actualHours[row.id] && actualHours[row.id][m] !== undefined
+          ? actualHours[row.id][m] : plannedHrs;
+        monthActual += impliedRate * actualHrs * qty;
+      }
+    });
+    cumPlanned += monthPlan;
+    if (m <= evm.currentMonth) cumActual += monthActual;
+    points.push({ m, planned: cumPlanned, actual: m <= evm.currentMonth ? cumActual : null });
+  }
+
+  const maxVal = Math.max(...points.map(p => p.planned), cumActual, 1);
+  const w = 680, h = 220, padL = 50, padB = 24, padT = 10, padR = 10;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+
+  const xFor = m => padL + (m-1)/(duration-1||1) * plotW;
+  const yFor = v => padT + plotH - (v/maxVal) * plotH;
+
+  const plannedPath = points.map((p,i) => `${i===0?'M':'L'} ${xFor(p.m)} ${yFor(p.planned)}`).join(' ');
+  const actualPoints = points.filter(p => p.actual !== null);
+  const actualPath = actualPoints.map((p,i) => `${i===0?'M':'L'} ${xFor(p.m)} ${yFor(p.actual)}`).join(' ');
+
+  const currentX = xFor(evm.currentMonth);
+
+  el.innerHTML = `<svg width="100%" viewBox="0 0 ${w} ${h}" style="overflow:visible">
+    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h-padB}" stroke="#dde4eb"/>
+    <line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="#dde4eb"/>
+    <text x="${padL-6}" y="${padT+4}" font-size="10" fill="#7a8fa0" text-anchor="end">${fmt(c,maxVal)}</text>
+    <text x="${padL-6}" y="${h-padB}" font-size="10" fill="#7a8fa0" text-anchor="end">0</text>
+    <line x1="${currentX}" y1="${padT}" x2="${currentX}" y2="${h-padB}" stroke="#1a6cf0" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+    <text x="${currentX}" y="${padT-2}" font-size="10" fill="#1a6cf0" text-anchor="middle">Now (M${evm.currentMonth})</text>
+    <path d="${plannedPath}" fill="none" stroke="#7a8fa0" stroke-width="2" stroke-dasharray="5,4"/>
+    <path d="${actualPath}" fill="none" stroke="#1a6cf0" stroke-width="2.5"/>
+    ${actualPoints.length ? `<circle cx="${xFor(actualPoints[actualPoints.length-1].m)}" cy="${yFor(actualPoints[actualPoints.length-1].actual)}" r="4" fill="#1a6cf0"/>` : ''}
+    <text x="${w-padR}" y="${padT+12}" font-size="10" fill="#7a8fa0" text-anchor="end">M${duration}</text>
+    <text x="${padL}" y="${h-4}" font-size="10" fill="#7a8fa0">M1</text>
+  </svg>
+  <div style="display:flex;gap:18px;font-size:12px;margin-top:6px">
+    <span style="color:#7a8fa0">– – Planned cumulative cost</span>
+    <span style="color:#1a6cf0">— Actual cumulative cost (to date)</span>
+  </div>`;
+}
+
+function renderEVMRecommendations(evm, d, c) {
+  const el = document.getElementById('evm-recommendations');
+  if (!el) return;
+
+  const recs = [];
+
+  if (evm.CPI < 0.85) {
+    recs.push({ severity: 'high', icon: '🔴', title: 'Significant cost overrun detected',
+      text: `CPI of ${evm.CPI.toFixed(2)} means you're getting only ${c}${evm.CPI.toFixed(2)} of value per ${c}1 spent. Review the per-resource variance table below to identify which roles are most over budget, and consider renegotiating scope or rates for those resources.` });
+  } else if (evm.CPI < 1) {
+    recs.push({ severity: 'med', icon: '🟡', title: 'Mild cost overrun — monitor closely',
+      text: `CPI of ${evm.CPI.toFixed(2)} is slightly under 1.0. This is recoverable but worth flagging to the team — small overruns compound over a long project.` });
+  } else if (evm.CPI >= 1.1) {
+    recs.push({ severity: 'good', icon: '🟢', title: 'Cost efficiency is strong',
+      text: `CPI of ${evm.CPI.toFixed(2)} suggests resources may be under-utilised relative to budget, or work is genuinely more efficient than planned. Consider whether budget could be reallocated to accelerate other workstreams.` });
+  }
+
+  if (evm.SPI < 0.85) {
+    recs.push({ severity: 'high', icon: '🔴', title: 'Project is falling significantly behind schedule',
+      text: `SPI of ${evm.SPI.toFixed(2)} means progress is well behind plan. Consider adding short-term contractor capacity to the most delayed roles, descoping non-critical features, or extending the deadline rather than compressing future months further.` });
+  } else if (evm.SPI < 1) {
+    recs.push({ severity: 'med', icon: '🟡', title: 'Schedule slipping slightly',
+      text: `SPI of ${evm.SPI.toFixed(2)} indicates a minor schedule slip. A focused sprint or temporary reallocation of hours from lower-priority categories could close this gap before it compounds.` });
+  }
+
+  if (evm.VAC < 0) {
+    const overrunPct = evm.originalTotalCost > 0 ? Math.abs(evm.VAC / evm.originalTotalCost * 100) : 0;
+    recs.push({ severity: overrunPct > 15 ? 'high' : 'med', icon: overrunPct > 15 ? '🔴' : '🟡',
+      title: `Forecast final cost is ${fmtFull(c, Math.abs(evm.VAC))} over original budget (${overrunPct.toFixed(0)}%)`,
+      text: `At the current burn rate and efficiency, total project cost is trending to ${fmtFull(c, evm.projectedTotalCost)} against an original budget of ${fmtFull(c, evm.originalTotalCost)}. ${overrunPct > 15 ? 'This exceeds typical contingency buffers — escalate to stakeholders now.' : 'This is within a typical 10-15% contingency buffer, but should be tracked weekly.'}` });
+  }
+
+  if (evm.perResource.length > 0) {
+    const worst = evm.perResource.reduce((a,b) => a.variance < b.variance ? a : b);
+    if (worst.variance < -100) {
+      recs.push({ severity: 'med', icon: '👤', title: `"${worst.desc}" is the largest driver of cost variance`,
+        text: `This resource has a variance of ${fmtFull(c, worst.variance)} (actual cost ${fmtFull(c, worst.actualCost)} vs. planned ${fmtFull(c, worst.plannedCost)}). Check whether this reflects scope creep, underestimated complexity, or a rate mismatch when this resource was budgeted.` });
+    }
+  }
+
+  if (d.totalProject > 0) {
+    const llmShare = d.catTotals.llm.total / d.totalProject;
+    if (llmShare > 0.15) {
+      recs.push({ severity: 'med', icon: '🤖', title: 'LLM / AI costs are a significant share of total spend',
+        text: `LLM costs represent ${Math.round(llmShare*100)}% of total project cost. Consider prompt optimisation, caching repeated queries, or a cheaper model tier for non-critical paths to reduce this without sacrificing the core feature.` });
+    }
+  }
+
+  if (recs.length === 0) {
+    recs.push({ severity: 'good', icon: '✅', title: 'No corrective action needed',
+      text: 'Cost and schedule performance are both on track. Continue current resourcing and re-check this page after logging next month\'s actual hours.' });
+  }
+
+  const sevBg    = { high: 'var(--red-lt)', med: 'var(--amber-lt)', good: 'var(--green-lt)' };
+  const sevText  = { high: 'var(--red)', med: '#92400e', good: 'var(--green)' };
+
+  el.innerHTML = recs.map(r => `<div style="display:flex;gap:12px;padding:14px;border-radius:var(--r8);background:${sevBg[r.severity]};margin-bottom:10px">
+    <div style="font-size:20px;flex-shrink:0">${r.icon}</div>
+    <div>
+      <div style="font-weight:700;font-size:13px;color:${sevText[r.severity]};margin-bottom:4px">${r.title}</div>
+      <div style="font-size:12px;color:var(--ink2);line-height:1.6">${r.text}</div>
+    </div>
+  </div>`).join('');
+}
+
+function computeCatTotals(duration) {
+  const totals = {};
+  CATS.forEach(cat => {
+    totals[cat] = { monthly: 0, onetime: 0, perunit: 0, total: 0 };
+    rows[cat].forEach(row => {
+      const rate = parseFloat(row.rate) || 0;
+      const qty  = parseFloat(row.qty)  || 1;
+      if (row.type === 'monthly') {
+        const monthlyCost = getRowMonthlyCost(row);
+        totals[cat].monthly += monthlyCost * qty;
+        totals[cat].total   += monthlyCost * qty * duration;
+      } else if (row.type === 'onetime') {
+        totals[cat].onetime += rate * qty;
+        totals[cat].total   += rate * qty;
+      } else if (row.type === 'perunit') {
+        totals[cat].perunit += rate * qty;
+      }
+    });
+  });
+  return totals;
+}
+
+function computeAll() {
+  const duration   = getNum('f-duration', 12);
+  const targetVol  = getNum('f-targetVol', 500);
+  const salesPeriod= getNum('f-salesPeriod', 12);
+  const currency   = getStr('f-currency', '$');
+  const unitLabel  = getStr('f-unitLabel', 'Units');
+
+  const catTotals  = computeCatTotals(duration);
+
+  let totalMonthly = 0, totalOnetime = 0, totalPerunit = 0, totalProject = 0;
+  CATS.forEach(cat => {
+    totalMonthly  += catTotals[cat].monthly;
+    totalOnetime  += catTotals[cat].onetime;
+    totalPerunit  += catTotals[cat].perunit;
+    totalProject  += catTotals[cat].total;
+  });
+
+  // Pricing
+  const margin       = getNum('f-margin', 35) / 100;
+  const churn        = getNum('f-churn', 3) / 100;
+  const growth       = getNum('f-growth', 10) / 100;
+  const costBuffer   = getNum('f-costBuffer', 15) / 100;
+  const minROI       = getNum('f-minROI', 15);
+  const maxPayback   = getNum('f-maxPayback', 36);
+  const minMarginPct = getNum('f-minMargin', 20);
+
+  const cpuFixed     = targetVol > 0 ? totalProject / targetVol : 0;
+  const costPerUnit  = cpuFixed + totalPerunit;
+
+  const manualPrice  = getNum('f-sellingPrice', 0);
+  const derivedPrice = margin < 1 && costPerUnit > 0 ? costPerUnit / (1 - margin) : costPerUnit * 1.5;
+  const sellingPrice = (manualPrice > 0) ? manualPrice : derivedPrice;
+
+  const grossMarginPct = sellingPrice > 0 ? (sellingPrice - costPerUnit) / sellingPrice * 100 : 0;
+
+  // Break-even
+  const contribPerUnit  = sellingPrice - totalPerunit;
+  const beUnits         = contribPerUnit > 0 ? Math.ceil(totalProject / contribPerUnit) : Infinity;
+  const beRevenue       = beUnits < Infinity ? beUnits * sellingPrice : Infinity;
+
+  // Revenue & profit at target
+  const targetRevenue   = sellingPrice * targetVol;
+  const netProfit       = targetRevenue - totalProject - totalPerunit * targetVol;
+
+  // Monthly net profit (post-launch)
+  const monthlyRevenue  = sellingPrice * targetVol / Math.max(salesPeriod, 1);
+  const monthlyNet      = monthlyRevenue - totalMonthly;
+  const paybackMonths   = (monthlyNet > 0 && totalOnetime > 0)
+    ? Math.ceil(totalOnetime / monthlyNet)
+    : (monthlyNet <= 0 ? Infinity : 0);
+
+  const roi = totalProject > 0 ? (netProfit / totalProject) * 100 : 0;
+
+  // Churn impact
+  const churnedUnits = Math.round(targetVol * churn * 12);
+
+  return {
+    duration, targetVol, salesPeriod, currency, unitLabel, catTotals,
+    totalMonthly, totalOnetime, totalPerunit, totalProject,
+    margin, churn, growth, costBuffer, minROI, maxPayback, minMarginPct,
+    cpuFixed, costPerUnit, sellingPrice, derivedPrice, manualPrice,
+    grossMarginPct, contribPerUnit, beUnits, beRevenue,
+    targetRevenue, netProfit, monthlyRevenue, monthlyNet,
+    paybackMonths, roi, churnedUnits
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FORMATTING
+// ═══════════════════════════════════════════════════════════════════
+function fmt(c, n, compact = true) {
+  if (!isFinite(n)) return '∞';
+  if (compact && Math.abs(n) >= 1e6) return c + (n/1e6).toFixed(2) + 'M';
+  if (compact && Math.abs(n) >= 1e3) return c + (n/1e3).toFixed(1) + 'k';
+  return c + Math.round(n).toLocaleString();
+}
+function fmtFull(c, n) {
+  if (!isFinite(n)) return '∞';
+  return c + Math.round(n).toLocaleString();
+}
+function fmtPct(n) { return isFinite(n) ? Math.round(n) + '%' : '∞%'; }
+function verdictClass(ok1, ok2, ok3, ok4) {
+  const score = [ok1,ok2,ok3,ok4].filter(Boolean).length;
+  return score === 4 ? 'go' : score >= 2 ? 'caution' : 'nogo';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MASTER RECALC — ALL OUTPUTS DERIVED FROM SINGLE computeAll()
+// ═══════════════════════════════════════════════════════════════════
+function recalcAll() {
+  const d = computeAll();
+  const c = d.currency;
+
+  // ── Row totals ──────────────────────────────────────────────────
+  CATS.forEach(cat => {
+    rows[cat].forEach(row => {
+      const el = document.getElementById('rtot-'+row.id);
+      if (!el) return;
+      const rate = parseFloat(row.rate)||0;
+      const qty  = parseFloat(row.qty)||1;
+      const total = computeRowTotal(row, d.duration);
+      const perU  = row.type === 'perunit' ? rate * qty : 0;
+      el.textContent = row.type === 'perunit'
+        ? fmtFull(c, perU) + '/unit'
+        : fmtFull(c, total);
+    });
+  });
+  // ── Sidebar totals ──────────────────────────────────────────────
+  setText('st-onetime', fmtFull(c, d.totalOnetime));
+  setText('st-monthly', fmtFull(c, d.totalMonthly) + '/mo');
+  setText('st-perunit', fmtFull(c, d.totalPerunit) + '/unit');
+  setText('st-total',   fmt(c, d.totalProject));
+
+  // ── Category badges (sidebar + header) ─────────────────────────
+  CATS.forEach(cat => {
+    const t = d.catTotals[cat];
+    setText('snb-'+cat, fmt(c, t.total));
+    setText('ct-'+cat,  fmt(c, t.total));
+    const count = rows[cat].length;
+    setText('cc-'+cat, count + ' item' + (count !== 1 ? 's' : ''));
+    const el = document.getElementById('nb-costs');
+    if (el) {
+      const total = CATS.reduce((s, ca) => s + rows[ca].length, 0);
+      el.textContent = total;
+    }
+  });
+
+  // ── Range display values ────────────────────────────────────────
+  setText('rv-margin',     Math.round(d.margin*100) + '%');
+  setText('rv-growth',     getNum('f-growth',10) + '%');
+  setText('rv-churn',      getNum('f-churn',3) + '%');
+  setText('rv-costBuffer', getNum('f-costBuffer',15) + '%');
+
+  // ── Derived price hint ──────────────────────────────────────────
+  const fhEl = document.getElementById('fh-derived-price');
+  if (fhEl) fhEl.textContent = d.manualPrice > 0
+    ? 'Manual override active — derived would be ' + fmtFull(c, d.derivedPrice)
+    : 'Auto-derived: ' + fmtFull(c, d.derivedPrice);
+
+  // ── Project setup snapshot ──────────────────────────────────────
+  setText('snap-name', getStr('f-projName','—'));
+  setText('snap-dur',  d.duration + '');
+  setText('snap-unit', getStr('f-unitLabel','—'));
+  setText('snap-vol',  d.targetVol.toLocaleString());
+  setText('snap-volsub', d.salesPeriod + '-month target');
+
+  // ── Assumptions page derived outputs ───────────────────────────
+  setText('ass-price', fmtFull(c, d.sellingPrice));
+  setText('ass-cpu',   fmtFull(c, d.costPerUnit));
+  setText('ass-rev',   fmt(c, d.targetRevenue));
+  setText('ass-churn', Math.round(d.churnedUnits).toLocaleString() + ' units/yr');
+
+  // ── Analysis page ───────────────────────────────────────────────
+  setText('an-totalCost',    fmt(c, d.totalProject));
+  setText('an-totalCostSub', 'over ' + d.duration + ' months');
+  setText('an-burn',         fmtFull(c, d.totalMonthly) + '/mo');
+  setText('an-onetime',      fmtFull(c, d.totalOnetime));
+
+  // Break-even metric card
+  const beOk = isFinite(d.beUnits) && d.beUnits <= d.targetVol;
+  setMetricCard('mc-be', beOk ? 'green' : 'red');
+  setText('an-beUnits', isFinite(d.beUnits) ? d.beUnits.toLocaleString() : '∞');
+  setText('an-beSub',   beOk ? '✓ within target volume' : '⚠ exceeds target volume');
+
+  // Payback metric card
+  const payOk = isFinite(d.paybackMonths) && d.paybackMonths > 0 && d.paybackMonths <= d.maxPayback;
+  setMetricCard('mc-payback', payOk ? 'green' : (d.paybackMonths <= d.maxPayback * 1.5 ? 'amber' : 'red'));
+  setText('an-payback', isFinite(d.paybackMonths) && d.paybackMonths > 0 ? d.paybackMonths + ' mo' : '∞');
+  setText('an-paybackSub', payOk ? '✓ within threshold' : 'Threshold: ' + d.maxPayback + ' months');
+
+  // ROI card
+  const roiOk = d.roi >= d.minROI;
+  setMetricCard('mc-roi', roiOk ? 'green' : (d.roi >= 0 ? 'amber' : 'red'));
+  setText('an-roi', fmtPct(d.roi));
+  setText('an-roiSub', 'Threshold: ' + d.minROI + '%');
+
+  // Gross margin card
+  const gmOk = d.grossMarginPct >= d.minMarginPct;
+  setMetricCard('mc-gm', gmOk ? 'green' : (d.grossMarginPct >= 0 ? 'amber' : 'red'));
+  setText('an-gm', fmtPct(d.grossMarginPct));
+  setText('an-gmSub', 'Threshold: ' + d.minMarginPct + '%');
+
+  // BE revenue card
+  const beRevColor = beOk ? 'green' : 'amber';
+  setMetricCard('mc-berev', beRevColor);
+  setText('an-beRev', isFinite(d.beRevenue) ? fmt(c, d.beRevenue) : '∞');
+
+  setText('an-netProfit', fmt(c, d.netProfit));
+
+  // ── Progress meter ──────────────────────────────────────────────
+  const fillEl = document.getElementById('pm-fill');
+  if (fillEl && isFinite(d.beUnits) && d.beUnits > 0) {
+    const pct = Math.min(Math.round(d.targetVol / d.beUnits * 100), 100);
+    fillEl.style.width = pct + '%';
+    fillEl.style.background = pct >= 100 ? 'var(--green)' : pct >= 60 ? 'var(--amber)' : 'var(--red)';
+    setText('pm-be-label', 'BE: ' + d.beUnits.toLocaleString() + ' units');
+    setText('pm-target-label', 'Target: ' + d.targetVol.toLocaleString() + ' units');
+    setText('pm-desc', pct >= 100
+      ? `✓ Target volume (${d.targetVol.toLocaleString()}) exceeds break-even (${d.beUnits.toLocaleString()}) by ${d.targetVol - d.beUnits} units`
+      : `Target volume covers ${pct}% of break-even — need ${(d.beUnits - d.targetVol).toLocaleString()} more units`);
+  }
+
+  // ── Cost breakdown chart ────────────────────────────────────────
+  renderCostBreakdown(d, c);
+
+  // ── Sensitivity table ───────────────────────────────────────────
+  renderSensitivity(d, c);
+
+  // ── Cash flow ───────────────────────────────────────────────────
+  renderCashFlow(d, c);
+
+  // ── Waterfall ───────────────────────────────────────────────────
+  renderWaterfall(d, c);
+
+  // ── Report page ─────────────────────────────────────────────────
+  renderReport(d, c, beOk, payOk, roiOk, gmOk);
+
+  // ── Time tracking table (rebuild if duration changed) ───────────
+  syncTrackingDurationEcho(d);
+  rebuildTrackingTableIfNeeded(d);
+
+  // ── EVM / Budget & schedule page ─────────────────────────────────
+  renderEVMPage(d, c);
+}
+
+function rebuildTrackingTableIfNeeded(d) {
+  if (lastTrackedDuration !== d.duration) {
+    lastTrackedDuration = d.duration;
+    rebuildTrackingTable();
+  }
+}
+function syncTrackingDurationEcho(d) {
+  const el = document.getElementById('f-durationEcho');
+  if (el) el.value = d.duration + ' months';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════
+
+function renderCostBreakdown(d, c) {
+  const el = document.getElementById('cost-bar-chart');
+  const tbl = document.getElementById('cost-breakdown-table');
+  if (!el || !tbl) return;
+
+  const maxVal = Math.max(...CATS.map(cat => d.catTotals[cat].total), 1);
+
+  el.innerHTML = CATS.map(cat => {
+    const val = d.catTotals[cat].total;
+    const pct = d.totalProject > 0 ? Math.round(val / d.totalProject * 100) : 0;
+    const w   = Math.round(val / maxVal * 100);
+    return `<div class="bar-row">
+      <div class="bar-label">${CAT_LABELS[cat]}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${w}%;background:${CAT_COLORS[cat]}"></div>
+      </div>
+      <div class="bar-val" style="color:${CAT_COLORS[cat]}">${fmt(c,val)} <span style="color:var(--ink3);font-weight:400">(${pct}%)</span></div>
+    </div>`;
+  }).join('');
+
+  // OT vs recurring split bar
+  const otPct  = d.totalProject > 0 ? Math.round(d.totalOnetime / d.totalProject * 100) : 0;
+  const recPct = 100 - otPct;
+
+  let tblHtml = CATS.map((cat, i) => {
+    const val = d.catTotals[cat].total;
+    const pct = d.totalProject > 0 ? Math.round(val / d.totalProject * 100) : 0;
+    return `<tr style="background:${i%2?'var(--bg)':''}">
+      <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${CAT_COLORS[cat]};margin-right:6px;vertical-align:middle"></span>${CAT_LABELS[cat]}</td>
+      <td style="text-align:right;font-size:12px;color:var(--ink3)">${fmtFull(c, d.catTotals[cat].monthly)}/mo</td>
+      <td style="text-align:right;font-size:12px;color:var(--ink3)">${fmtFull(c, d.catTotals[cat].onetime)} once</td>
+      <td style="text-align:right;font-weight:700">${fmtFull(c, val)}</td>
+      <td style="text-align:right;color:var(--ink3)">${pct}%</td>
+    </tr>`;
+  }).join('');
+  tblHtml += `<tr style="background:var(--bg);font-weight:800;border-top:2px solid var(--border)">
+    <td colspan="3">Total project cost</td>
+    <td style="text-align:right;color:var(--blue-dk)">${fmtFull(c, d.totalProject)}</td>
+    <td style="text-align:right">100%</td>
+  </tr>
+  <tr style="background:var(--bg)">
+    <td colspan="5" style="padding-top:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--ink3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em">One-time vs. recurring split</div>
+      <div style="display:flex;height:16px;border-radius:4px;overflow:hidden;margin-bottom:4px">
+        <div style="width:${recPct}%;background:var(--blue)"></div>
+        <div style="width:${otPct}%;background:var(--amber)"></div>
+      </div>
+      <div style="display:flex;gap:16px;font-size:11px">
+        <span style="color:var(--blue)">● Recurring ${fmtFull(c, d.totalMonthly*d.duration)} (${recPct}%)</span>
+        <span style="color:var(--amber)">● One-time ${fmtFull(c, d.totalOnetime)} (${otPct}%)</span>
+        ${d.totalPerunit>0?`<span style="color:var(--purple)">● Per-unit ${fmtFull(c,d.totalPerunit)}/unit</span>`:''}
+      </div>
+    </td>
+  </tr>`;
+  tbl.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr>
+      <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3)">Category</th>
+      <th style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3)">Monthly</th>
+      <th style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3)">One-time</th>
+      <th style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3)">Project total</th>
+      <th style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3)">%</th>
+    </tr></thead>
+    <tbody>${tblHtml}</tbody>
+  </table>`;
+}
+
+function renderSensitivity(d, c) {
+  const tbody = document.getElementById('sens-tbody');
+  if (!tbody) return;
+
+  const volBase = getNum('f-volBase', d.targetVol);
+  const volOpt  = getNum('f-volOpt', Math.round(d.targetVol * 1.6));
+  const volPess = getNum('f-volPess', Math.round(d.targetVol * 0.4));
+
+  const scenarios = [
+    { label: 'Base case',            vol: volBase, costMult: 1,    priceMult: 1    },
+    { label: 'Optimistic volume',    vol: volOpt,  costMult: 1,    priceMult: 1    },
+    { label: 'Pessimistic volume',   vol: volPess, costMult: 1,    priceMult: 1    },
+    { label: 'Cost overrun +' + Math.round(d.costBuffer*100) + '%', vol: volBase, costMult: 1+d.costBuffer, priceMult:1 },
+    { label: 'Cost overrun +30%',    vol: volBase, costMult: 1.30, priceMult: 1    },
+    { label: 'Price cut −10%',       vol: volBase, costMult: 1,    priceMult: 0.90 },
+    { label: 'Price cut −20%',       vol: volBase, costMult: 1,    priceMult: 0.80 },
+    { label: 'Volume −40% + cost +15%', vol: volPess, costMult: 1.15, priceMult: 1 },
+    { label: 'Best case (opt + no overrun)', vol: volOpt, costMult: 0.90, priceMult: 1.05 },
+    { label: 'Worst case (pess + overrun)', vol: volPess, costMult: 1.30, priceMult: 0.90 },
+  ];
+
+  tbody.innerHTML = scenarios.map((s, i) => {
+    const adjCost  = d.totalProject * s.costMult;
+    const adjPrice = d.sellingPrice * s.priceMult;
+    const adjVar   = d.totalPerunit;
+    const cp       = s.vol > 0 ? adjCost / s.vol + adjVar : Infinity;
+    const beu      = (adjPrice - adjVar) > 0 ? Math.ceil(adjCost / (adjPrice - adjVar)) : Infinity;
+    const bev      = isFinite(beu) ? beu * adjPrice : Infinity;
+    const mRev     = adjPrice * s.vol / Math.max(d.salesPeriod, 1);
+    const mNet     = mRev - d.totalMonthly * s.costMult;
+    const pb       = (mNet > 0 && d.totalOnetime * s.costMult > 0) ? Math.ceil((d.totalOnetime * s.costMult) / mNet) : Infinity;
+    const roi      = adjCost > 0 ? Math.round((adjPrice * s.vol - adjCost - adjVar * s.vol) / adjCost * 100) : 0;
+    const beOk     = isFinite(beu) && beu <= s.vol;
+    const payOk    = isFinite(pb) && pb > 0 && pb <= d.maxPayback;
+    const roiOk    = roi >= d.minROI;
+    const gm       = adjPrice > 0 ? (adjPrice - cp) / adjPrice * 100 : 0;
+    const gmOk     = gm >= d.minMarginPct;
+    const score    = [beOk, payOk, roiOk, gmOk].filter(Boolean).length;
+    const vc       = score === 4 ? 'go' : score >= 2 ? 'caution' : 'nogo';
+    const vl       = score === 4 ? 'Go' : score >= 2 ? 'Caution' : 'No-Go';
+
+    return `<tr style="background:${i%2?'var(--bg)':''}">
+      <td style="font-weight:${i===0?700:400}">${s.label}</td>
+      <td class="r">${isFinite(beu) ? beu.toLocaleString() : '∞'}</td>
+      <td class="r">${isFinite(bev) ? fmt(c, bev) : '∞'}</td>
+      <td class="r" style="color:${roi>=0?'var(--green)':'var(--red)'}">${roi}%</td>
+      <td class="r">${isFinite(pb) && pb > 0 ? pb + ' mo' : '∞'}</td>
+      <td><span class="verdict-pill vp-${vc}">${vl}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderCashFlow(d, c) {
+  const el = document.getElementById('cf-chart');
+  if (!el) return;
+
+  const monthlyNet = d.monthlyNet;
+  let cum = -d.totalOnetime;
+  const maxAbs = Math.max(Math.abs(cum), Math.abs(monthlyNet) * 24, 1);
+
+  let html = '';
+  for (let mo = 1; mo <= 24; mo++) {
+    cum += monthlyNet;
+    const w   = Math.min(Math.abs(cum) / maxAbs * 100, 100);
+    const pos = cum >= 0;
+    const col = pos ? 'var(--green)' : 'var(--red)';
+    html += `<div class="cf-row">
+      <div class="cf-mo">Mo ${mo}</div>
+      <div class="cf-track"><div class="cf-fill" style="width:${w}%;background:${col}"></div></div>
+      <div class="cf-val" style="color:${col}">${fmt(c, cum)}</div>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+function renderWaterfall(d, c) {
+  const el = document.getElementById('wf-chart');
+  if (!el) return;
+
+  const revenue = d.sellingPrice * d.targetVol;
+  const items = [
+    { label: 'Revenue',       val:  revenue,                color: 'var(--blue)' },
+    ...CATS.map(cat => ({ label: '− ' + CAT_LABELS[cat], val: -d.catTotals[cat].total, color: CAT_COLORS[cat] })),
+    { label: '− Variable',    val: -(d.totalPerunit * d.targetVol), color: 'var(--purple)' },
+    { label: 'Net profit',    val:  d.netProfit,             color: d.netProfit >= 0 ? 'var(--green)' : 'var(--red)' },
+  ].filter(item => item.val !== 0);
+
+  const maxVal = Math.max(...items.map(i => Math.abs(i.val)), 1);
+  el.innerHTML = items.map(item => {
+    const w = Math.round(Math.abs(item.val) / maxVal * 100);
+    return `<div class="wf-row">
+      <div class="wf-label">${item.label}</div>
+      <div class="wf-track"><div class="wf-fill" style="width:${w}%;background:${item.color}"></div></div>
+      <div class="wf-val" style="color:${item.color}">${item.val < 0 ? '−' : ''}${fmt(c, Math.abs(item.val))}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderReport(d, c, beOk, payOk, roiOk, gmOk) {
+  const verdictEl = document.getElementById('report-verdict');
+  const checkEl   = document.getElementById('report-checklist');
+  const sumEl     = document.getElementById('report-summary-table');
+  const costEl    = document.getElementById('report-cost-table');
+  const assEl     = document.getElementById('report-assumptions');
+  const lineEl    = document.getElementById('report-line-items');
+  if (!verdictEl) return;
+
+  const score = [beOk, payOk, roiOk, gmOk].filter(Boolean).length;
+  const vc    = score === 4 ? 'go' : score >= 2 ? 'caution' : 'nogo';
+  const viconMap = { go: '✅', caution: '⚠️', nogo: '❌' };
+  const vtitleMap = {
+    go:      'Strong go — all financial tests pass',
+    caution: 'Proceed with caution — ' + (4-score) + ' test(s) failing',
+    nogo:    'No-go — project fails ' + (4-score) + ' of 4 financial tests'
+  };
+  const vdescMap = {
+    go:      `${getStr('f-projName','Project')} clears all 4 financial thresholds. Break-even of ${isFinite(d.beUnits)?d.beUnits.toLocaleString():'∞'} units is within the ${d.targetVol.toLocaleString()}-unit target. ROI is ${fmtPct(d.roi)}, payback is ${isFinite(d.paybackMonths)&&d.paybackMonths>0?d.paybackMonths:' N/A'} months.`,
+    caution: 'Project shows commercial potential but has risk areas. Review failing tests below and apply mitigation before committing budget.',
+    nogo:    'Project does not meet minimum financial viability criteria. Revisit cost structure, volume assumptions, or pricing before reconsidering.'
+  };
+
+  verdictEl.innerHTML = `<div class="verdict-box ${vc}">
+    <div class="vb-head">
+      <div class="vb-icon">${viconMap[vc]}</div>
+      <div class="vb-title">${vtitleMap[vc]}</div>
+    </div>
+    <div class="vb-desc">${vdescMap[vc]}</div>
+  </div>`;
+
+  // Checklist
+  const checks = [
+    { ok: beOk,  label: 'Break-even ≤ target volume',   detail: `BE: ${isFinite(d.beUnits)?d.beUnits.toLocaleString():'∞'} units vs. target: ${d.targetVol.toLocaleString()} units` },
+    { ok: roiOk, label: 'ROI ≥ ' + d.minROI + '%',     detail: `Projected ROI: ${fmtPct(d.roi)}` },
+    { ok: payOk, label: 'Payback ≤ ' + d.maxPayback + ' months', detail: `Payback period: ${isFinite(d.paybackMonths)&&d.paybackMonths>0?d.paybackMonths+' months':'∞'}` },
+    { ok: gmOk,  label: 'Gross margin ≥ ' + d.minMarginPct + '%', detail: `Gross margin: ${fmtPct(d.grossMarginPct)}` },
+  ];
+  checkEl.innerHTML = checks.map(ch => `<div class="check-row">
+    <div class="check-dot" style="background:${ch.ok?'var(--green)':'var(--red)'}"></div>
+    <div class="check-text"><strong>${ch.ok?'✓ PASS':'✗ FAIL'} — ${ch.label}</strong><span>${ch.detail}</span></div>
+  </div>`).join('');
+
+  // Summary table
+  sumEl.innerHTML = `
+    <tr><td>Project name</td><td>${getStr('f-projName','—')}</td></tr>
+    <tr><td>Description</td><td>${getStr('f-projDesc','—')}</td></tr>
+    <tr><td>Product category</td><td>${getStr('f-prodCat','—')}</td></tr>
+    <tr><td>Development duration</td><td>${d.duration} months</td></tr>
+    <tr><td>Unit / licence type</td><td>${d.unitLabel}</td></tr>
+    <tr><td>Target volume</td><td>${d.targetVol.toLocaleString()} ${d.unitLabel.toLowerCase()}</td></tr>
+    <tr><td>Sales period</td><td>${d.salesPeriod} months</td></tr>
+    <tr class="total-row"><td>Total project cost</td><td>${fmtFull(c, d.totalProject)}</td></tr>
+    <tr><td>Monthly burn rate</td><td>${fmtFull(c, d.totalMonthly)}/month</td></tr>
+    <tr><td>One-time costs</td><td>${fmtFull(c, d.totalOnetime)}</td></tr>
+    <tr><td>Variable cost per unit</td><td>${fmtFull(c, d.totalPerunit)}</td></tr>
+    <tr><td>Cost per unit (at target volume)</td><td>${fmtFull(c, d.costPerUnit)}</td></tr>
+    <tr><td>Selling price per ${d.unitLabel.toLowerCase()}</td><td>${fmtFull(c, d.sellingPrice)}</td></tr>
+    <tr><td>Target gross margin</td><td>${Math.round(d.margin*100)}%</td></tr>
+    <tr><td>Target revenue</td><td>${fmtFull(c, d.targetRevenue)}</td></tr>
+    <tr><td>Break-even units</td><td>${isFinite(d.beUnits) ? d.beUnits.toLocaleString() : '∞'}</td></tr>
+    <tr><td>Break-even revenue</td><td>${isFinite(d.beRevenue) ? fmtFull(c, d.beRevenue) : '∞'}</td></tr>
+    <tr><td>Projected ROI</td><td>${fmtPct(d.roi)}</td></tr>
+    <tr><td>Actual gross margin</td><td>${fmtPct(d.grossMarginPct)}</td></tr>
+    <tr><td>Payback period</td><td>${isFinite(d.paybackMonths)&&d.paybackMonths>0?d.paybackMonths+' months':'∞'}</td></tr>
+    <tr><td>Net profit at target volume</td><td>${fmtFull(c, d.netProfit)}</td></tr>
+    <tr class="total-row"><td>Verdict</td><td>${score}/4 tests pass — ${vc.toUpperCase()}</td></tr>
+  `;
+
+  // Cost table
+  costEl.innerHTML = `<tr style="background:var(--bg)">
+    <td style="font-weight:700">Category</td>
+    <td style="font-weight:700;text-align:right">Monthly</td>
+    <td style="font-weight:700;text-align:right">One-time</td>
+    <td style="font-weight:700;text-align:right">Per-unit</td>
+    <td style="font-weight:700;text-align:right">Project total</td>
+  </tr>` + CATS.map(cat => `<tr>
+    <td>${CAT_LABELS[cat]}</td>
+    <td style="text-align:right">${fmtFull(c, d.catTotals[cat].monthly)}/mo</td>
+    <td style="text-align:right">${fmtFull(c, d.catTotals[cat].onetime)}</td>
+    <td style="text-align:right">${fmtFull(c, d.catTotals[cat].perunit)}/unit</td>
+    <td style="text-align:right;font-weight:700">${fmtFull(c, d.catTotals[cat].total)}</td>
+  </tr>`).join('') + `<tr class="total-row">
+    <td>TOTAL</td>
+    <td style="text-align:right">${fmtFull(c, d.totalMonthly)}/mo</td>
+    <td style="text-align:right">${fmtFull(c, d.totalOnetime)}</td>
+    <td style="text-align:right">${fmtFull(c, d.totalPerunit)}/unit</td>
+    <td style="text-align:right">${fmtFull(c, d.totalProject)}</td>
+  </tr>`;
+
+  // Assumptions log
+  if (assEl) assEl.innerHTML = [
+    `Duration: ${d.duration} months`,
+    `Target volume: ${d.targetVol.toLocaleString()} ${d.unitLabel.toLowerCase()}`,
+    `Target margin: ${Math.round(d.margin*100)}%`,
+    `Selling price: ${fmtFull(c, d.sellingPrice)} ${d.manualPrice>0?'(manual)':'(derived)'}`,
+    `Churn: ${Math.round(d.churn*100)}%/mo`,
+    `Growth: ${getNum('f-growth',10)}%/yr`,
+    `Cost buffer: ${Math.round(d.costBuffer*100)}%`,
+    `Min ROI: ${d.minROI}%`,
+    `Max payback: ${d.maxPayback} mo`,
+    `Min margin: ${d.minMarginPct}%`,
+  ].map(a => `<span class="assumption-tag">${a}</span>`).join('');
+
+  // Full line items
+  let liHtml = `<tr style="background:var(--bg)">
+    <td style="font-weight:700">Category</td>
+    <td style="font-weight:700">Description</td>
+    <td style="font-weight:700;text-align:right">Rate</td>
+    <td style="font-weight:700;text-align:right">Qty</td>
+    <td style="font-weight:700">Type</td>
+    <td style="font-weight:700;text-align:right">Total</td>
+    <td style="font-weight:700">Notes</td>
+  </tr>`;
+  let grandTotal = 0;
+  CATS.forEach((cat, ci) => {
+    rows[cat].forEach((row, i) => {
+      const rate = parseFloat(row.rate)||0;
+      const qty  = parseFloat(row.qty)||1;
+      const total = computeRowTotal(row, d.duration);
+      const pu    = row.type === 'perunit' ? rate * qty : 0;
+      grandTotal += total;
+      liHtml += `<tr style="background:${(ci+i)%2?'var(--bg)':''}">
+        <td style="color:${CAT_COLORS[cat]};font-weight:600;font-size:11px">${CAT_LABELS[cat]}</td>
+        <td>${row.desc || '—'}</td>
+        <td style="text-align:right;font-feature-settings:'tnum'">${fmtFull(c, rate)}</td>
+        <td style="text-align:right">${qty}</td>
+        <td><span style="font-size:11px;padding:2px 6px;border-radius:10px;background:${row.type==='monthly'?'var(--blue-lt)':row.type==='onetime'?'var(--amber-lt)':'var(--purple-lt)'}; color:${row.type==='monthly'?'var(--blue-dk)':row.type==='onetime'?'#92400e':'#4c1d95'};font-weight:600">${row.type}</span></td>
+        <td style="text-align:right;font-weight:700;font-feature-settings:'tnum'">${row.type==='perunit'?fmtFull(c,pu)+'/unit':fmtFull(c,total)}</td>
+        <td style="color:var(--ink3);font-size:12px">${row.notes||''}</td>
+      </tr>`;
+    });
+  });
+  liHtml += `<tr class="total-row"><td colspan="5">Grand total</td><td style="text-align:right">${fmtFull(c, grandTotal)}</td><td></td></tr>`;
+  lineEl.innerHTML = liHtml;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function setMetricCard(id, colorClass) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'metric-card ' + colorClass;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SEED DEFAULT DATA
+// ═══════════════════════════════════════════════════════════════════
+function seedDefaults() {
+  // Labour
+  addRow('labour', { desc: 'Senior full-stack developer',   rate: 8500,  qty: 2, type: 'monthly', notes: 'Core product build', rateBasis: 'monthly', plannedHours: 160 });
+  addRow('labour', { desc: 'Backend / API engineer',        rate: 7500,  qty: 1, type: 'monthly', notes: 'LLM integration lead', rateBasis: 'monthly', plannedHours: 160 });
+  addRow('labour', { desc: 'Product manager',               rate: 6000,  qty: 1, type: 'monthly', notes: '', rateBasis: 'monthly', plannedHours: 160 });
+  addRow('labour', { desc: 'UX / UI designer (contractor)', rate: 55,    qty: 1, type: 'monthly', notes: 'Part-time, hourly billed', rateBasis: 'hourly', plannedHours: 80 });
+  addRow('labour', { desc: 'DevOps / platform engineer',    rate: 6500,  qty: 1, type: 'monthly', notes: 'CI/CD + infra', rateBasis: 'monthly', plannedHours: 160 });
+  addRow('labour', { desc: 'QA engineer (contractor)',      rate: 40,    qty: 1, type: 'monthly', notes: 'Hourly billed, flexes with sprints', rateBasis: 'hourly', plannedHours: 100 });
+
+  // Cloud infra
+  addRow('infra',  { desc: 'AWS EC2 compute (t3.large ×4)', rate: 560,   qty: 1, type: 'monthly', notes: 'Auto-scaling group' });
+  addRow('infra',  { desc: 'AWS RDS PostgreSQL (db.t3.medium)', rate: 180, qty: 1, type: 'monthly', notes: 'Multi-AZ production' });
+  addRow('infra',  { desc: 'AWS S3 + CloudFront CDN',       rate: 90,    qty: 1, type: 'monthly', notes: 'Static assets + files' });
+  addRow('infra',  { desc: 'Datadog monitoring',            rate: 250,   qty: 1, type: 'monthly', notes: 'APM + logs + alerts' });
+  addRow('infra',  { desc: 'AWS SES email service',         rate: 40,    qty: 1, type: 'monthly', notes: 'Transactional email' });
+  addRow('infra',  { desc: 'Domain + SSL certs',            rate: 150,   qty: 1, type: 'onetime', notes: '3-year registration' });
+
+  // APIs / SaaS
+  addRow('apis',   { desc: 'Stripe payment processing',     rate: 120,   qty: 1, type: 'monthly', notes: '2.9% + 30c per tx (est.)' });
+  addRow('apis',   { desc: 'Auth0 identity platform',       rate: 240,   qty: 1, type: 'monthly', notes: 'Up to 1,000 MAU' });
+  addRow('apis',   { desc: 'Intercom customer support',     rate: 180,   qty: 1, type: 'monthly', notes: 'Starter plan' });
+  addRow('apis',   { desc: 'Mixpanel analytics',            rate: 160,   qty: 1, type: 'monthly', notes: 'Growth plan' });
+  addRow('apis',   { desc: 'SendGrid email delivery',       rate: 60,    qty: 1, type: 'monthly', notes: 'Pro 50k plan' });
+  addRow('apis',   { desc: 'Algolia search',                rate: 110,   qty: 1, type: 'monthly', notes: 'Build plan' });
+
+  // LLM / AI
+  addRow('llm',    { desc: 'Claude API (Anthropic) — core AI feature', rate: 480, qty: 1, type: 'monthly', notes: '~160M tokens/mo at $3/1M input' });
+  addRow('llm',    { desc: 'OpenAI embeddings (text-embedding-3-small)', rate: 85, qty: 1, type: 'monthly', notes: 'Vector search / semantic' });
+  addRow('llm',    { desc: 'AWS Bedrock fallback / redundancy',          rate: 120, qty: 1, type: 'monthly', notes: 'HA failover model' });
+
+  // Overhead
+  addRow('overhead', { desc: 'Legal — company setup + contracts', rate: 4500, qty: 1, type: 'onetime', notes: 'Solicitor fees' });
+  addRow('overhead', { desc: 'Privacy / GDPR compliance consultant', rate: 2800, qty: 1, type: 'onetime', notes: 'DPA + T&Cs' });
+  addRow('overhead', { desc: 'Security pen-test (DVT stage)',       rate: 6000, qty: 1, type: 'onetime', notes: 'External firm' });
+  addRow('overhead', { desc: 'Marketing + launch campaign',         rate: 8000, qty: 1, type: 'onetime', notes: 'Content + PPC launch' });
+  addRow('overhead', { desc: 'Contingency buffer',                  rate: 1200, qty: 1, type: 'monthly', notes: '~10% of other monthly costs' });
+  addRow('overhead', { desc: 'Office / co-working space',           rate: 800,  qty: 1, type: 'monthly', notes: 'Hot desks x4' });
+  addRow('overhead', { desc: 'Accounting / bookkeeping',            rate: 350,  qty: 1, type: 'monthly', notes: 'Monthly retainer' });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SEED DEMO ACTUAL HOURS — shows realistic variance out of the box
+// ═══════════════════════════════════════════════════════════════════
+function seedActualHours() {
+  // Get labour rows in insertion order
+  const [dev1, dev2, pm, designer, devops, qa] = rows.labour;
+  // dev1 = Senior full-stack ×2 (160 hrs/mo plan) — running slightly over hours (scope creep)
+  if (dev1) { actualHours[dev1.id] = { 1:165, 2:170, 3:175, 4:180, 5:172, 6:178 }; }
+  // dev2 = Backend/API engineer (160 hrs/mo plan) — on plan
+  if (dev2) { actualHours[dev2.id] = { 1:160, 2:158, 3:162, 4:160, 5:159, 6:161 }; }
+  // pm = Product manager (160 hrs/mo plan) — on plan
+  if (pm) { actualHours[pm.id] = { 1:160, 2:160, 3:155, 4:160, 5:158, 6:160 }; }
+  // designer = hourly contractor (80 hrs/mo plan) — under hours early, catching up
+  if (designer) { actualHours[designer.id] = { 1:60, 2:70, 3:85, 4:90, 5:88, 6:82 }; }
+  // devops = monthly (160 hrs/mo plan) — running over (firefighting infra issues)
+  if (devops) { actualHours[devops.id] = { 1:170, 2:185, 3:190, 4:195, 5:188, 6:192 }; }
+  // qa = hourly contractor (100 hrs/mo plan) — under hours (testing behind schedule)
+  if (qa) { actualHours[qa.id] = { 1:70, 2:75, 3:80, 4:78, 5:82, 6:76 }; }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// EXPORT ENGINE — Excel, PowerPoint, PDF, JSON
+// All exports pull live from computeAll() / computeEVM() — never stale data
+// ═══════════════════════════════════════════════════════════════════
+
+function toggleExportMenu() {
+  document.getElementById('export-menu').classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  const menu = document.getElementById('export-menu');
+  const btn = document.getElementById('export-menu-btn');
+  if (menu && !menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+    menu.classList.remove('open');
+  }
+});
+
+function showExportStatus(msg, type) {
+  const el = document.getElementById('export-status');
+  if (!el) return;
+  el.style.display = 'flex';
+  el.className = 'export-status' + (type ? ' ' + type : '');
+  el.innerHTML = type === 'loading'
+    ? '<span class="export-spinner"></span>' + msg
+    : msg;
+  if (type === 'success' || type === 'error') {
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+}
+
+function safeFilename(s) {
+  return (s || 'TCTP_Project').replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '');
+}
+
+// Build one shared "export model" object from current live state — every
+// export function reads from this so all 4 formats always agree with
+// each other and with whatever is on screen right now.
+function buildExportModel() {
+  const d = computeAll();
+  const evm = computeEVM(d);
+  const c = d.currency;
+  const margin = parseFloat(document.getElementById('tgtMargin') ? null : null); // unused placeholder
+  const beUnits = d.beUnits;
+  const volume = d.targetVol;
+  const score = [
+    isFinite(beUnits) && beUnits <= volume,
+    d.roi >= d.minROI,
+    isFinite(d.paybackMonths) && d.paybackMonths > 0 && d.paybackMonths <= d.maxPayback,
+    d.grossMarginPct >= d.minMarginPct
+  ];
+  const passCount = score.filter(Boolean).length;
+  const verdict = passCount === 4 ? 'Go' : passCount >= 2 ? 'Caution' : 'No-Go';
+
+  // Per-row line items, grouped by category, with display-ready fields
+  const lineItems = [];
+  CATS.forEach(cat => {
+    rows[cat].forEach(row => {
+      const rate = parseFloat(row.rate) || 0;
+      const qty = parseFloat(row.qty) || 1;
+      const total = computeRowTotal(row, d.duration);
+      const monthlyEquiv = row.type === 'monthly' ? getRowMonthlyCost(row) * qty : 0;
+      lineItems.push({
+        category: cat, categoryLabel: CAT_LABELS[cat], color: CAT_COLORS[cat],
+        desc: row.desc || '(unnamed)', rateBasis: row.rateBasis || '', rate, qty,
+        plannedHours: row.plannedHours || 0, type: row.type, notes: row.notes || '',
+        monthlyEquiv, total
+      });
+    });
+  });
+
+  // Sensitivity scenarios (mirrors renderSensitivity logic)
+  const volBase = getNum('f-volBase', d.targetVol);
+  const volOpt = getNum('f-volOpt', Math.round(d.targetVol * 1.6));
+  const volPess = getNum('f-volPess', Math.round(d.targetVol * 0.4));
+  const scenarioDefs = [
+    { label: 'Base case', vol: volBase, costMult: 1, priceMult: 1 },
+    { label: 'Optimistic volume', vol: volOpt, costMult: 1, priceMult: 1 },
+    { label: 'Pessimistic volume', vol: volPess, costMult: 1, priceMult: 1 },
+    { label: 'Cost overrun +' + Math.round(d.costBuffer*100) + '%', vol: volBase, costMult: 1+d.costBuffer, priceMult: 1 },
+    { label: 'Cost overrun +30%', vol: volBase, costMult: 1.30, priceMult: 1 },
+    { label: 'Price cut -10%', vol: volBase, costMult: 1, priceMult: 0.90 },
+    { label: 'Price cut -20%', vol: volBase, costMult: 1, priceMult: 0.80 },
+    { label: 'Worst case', vol: volPess, costMult: 1.30, priceMult: 0.90 },
+  ];
+  const sensitivity = scenarioDefs.map(s => {
+    const adjCost = d.totalProject * s.costMult;
+    const adjPrice = d.sellingPrice * s.priceMult;
+    const adjVar = d.totalPerunit;
+    const beu = (adjPrice - adjVar) > 0 ? Math.ceil(adjCost / (adjPrice - adjVar)) : Infinity;
+    const bev = isFinite(beu) ? beu * adjPrice : Infinity;
+    const roi = adjCost > 0 ? Math.round((adjPrice * s.vol - adjCost - adjVar * s.vol) / adjCost * 100) : 0;
+    const beOk = isFinite(beu) && beu <= s.vol;
+    const sVerdict = beOk ? 'Go' : (roi >= 0 ? 'Caution' : 'No-Go');
+    return { label: s.label, vol: s.vol, beUnits: beu, beRevenue: bev, roi, verdict: sVerdict };
+  });
+
+  return { d, evm, c, beUnits, volume, passCount, verdict, lineItems, sensitivity };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// EXCEL EXPORT (SheetJS)
+// ─────────────────────────────────────────────────────────────────────
+function exportExcel() {
+  toggleExportMenu();
+  if (typeof XLSX === 'undefined') {
+    showExportStatus('Excel library failed to load — check your internet connection and try again.', 'error');
+    return;
+  }
+  showExportStatus('Building Excel workbook…', 'loading');
+
+  try {
+    const m = buildExportModel();
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Overview
+    const ov = [
+      ['TCTP — Target Cost, Target Profit'],
+      ['Software Financial Model — Excel Export'],
+      [],
+      [getStr('f-projName','Project'), getStr('f-projDesc','')],
+      [],
+      ['Development duration', m.d.duration, 'months'],
+      ['Currency', m.c],
+      ['Target volume', m.d.targetVol, getStr('f-unitLabel','Units')],
+      ['Sales period', m.d.salesPeriod, 'months'],
+      [],
+      ['KEY METRICS SUMMARY'],
+      ['Total project cost', m.d.totalProject],
+      ['Cost per unit', m.d.costPerUnit],
+      ['Selling price', m.d.sellingPrice],
+      ['Break-even units', m.beUnits],
+      ['Projected ROI (%)', m.d.roi],
+      ['Payback period (months)', m.d.paybackMonths],
+      ['CPI (labour)', m.evm.CPI],
+      ['SPI (labour)', m.evm.SPI],
+      ['Projected total cost (EVM forecast)', m.evm.projectedTotalCost],
+      ['Verdict', m.verdict + ' (' + m.passCount + '/4 tests pass)'],
+    ];
+    const wsOv = XLSX.utils.aoa_to_sheet(ov);
+    wsOv['!cols'] = [{wch:32},{wch:18},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, wsOv, 'Overview');
+
+    // Sheet 2: Cost Inputs
+    const ciHeader = ['Category','Description','Rate basis','Rate','Qty','Type','Planned hrs/mo','Monthly equiv.','Project total','Notes'];
+    const ciRows = m.lineItems.map(li => [
+      li.categoryLabel, li.desc, li.rateBasis, li.rate, li.qty, li.type,
+      li.plannedHours, li.monthlyEquiv, li.total, li.notes
+    ]);
+    const ciTotalRow = ['', '', '', '', '', '', '', 'TOTAL', m.d.totalProject, ''];
+    const wsCi = XLSX.utils.aoa_to_sheet([ciHeader, ...ciRows, [], ciTotalRow]);
+    wsCi['!cols'] = [{wch:16},{wch:30},{wch:14},{wch:10},{wch:6},{wch:10},{wch:12},{wch:14},{wch:14},{wch:24}];
+    XLSX.utils.book_append_sheet(wb, wsCi, 'Cost Inputs');
+
+    // Sheet 3: Time Tracking
+    const ttHeader = ['Resource','Plan hrs/mo'];
+    for (let i=1;i<=m.d.duration;i++) ttHeader.push('M'+i);
+    const ttRows = rows.labour.map(row => {
+      const r = [row.desc, row.plannedHours];
+      for (let i=1;i<=m.d.duration;i++) {
+        r.push(actualHours[row.id] && actualHours[row.id][i] !== undefined ? actualHours[row.id][i] : '');
+      }
+      return r;
+    });
+    const wsTt = XLSX.utils.aoa_to_sheet([ttHeader, ...ttRows]);
+    XLSX.utils.book_append_sheet(wb, wsTt, 'Time Tracking');
+
+    // Sheet 4: Pricing & Targets
+    const pt = [
+      ['Pricing & Targets'],
+      [],
+      ['Target profit margin (%)', m.d.margin*100],
+      ['Manual price override', m.d.manualPrice],
+      ['Annual growth (%)', m.d.growth*100],
+      ['Monthly churn (%)', m.d.churn*100],
+      [],
+      ['Optimistic volume', getNum('f-volOpt', Math.round(m.d.targetVol*1.6))],
+      ['Base case volume', getNum('f-volBase', m.d.targetVol)],
+      ['Pessimistic volume', getNum('f-volPess', Math.round(m.d.targetVol*0.4))],
+      [],
+      ['Cost overrun buffer (%)', m.d.costBuffer*100],
+      ['Min ROI threshold (%)', m.d.minROI],
+      ['Max payback (months)', m.d.maxPayback],
+      ['Min gross margin (%)', m.d.minMarginPct],
+    ];
+    const wsPt = XLSX.utils.aoa_to_sheet(pt);
+    wsPt['!cols'] = [{wch:28},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, wsPt, 'Pricing & Targets');
+
+    // Sheet 5: Break-Even & Sensitivity
+    const beSheet = [
+      ['Break-Even & Sensitivity Analysis'],
+      [],
+      ['Break-even units', m.beUnits],
+      ['Break-even revenue', isFinite(m.d.beRevenue) ? m.d.beRevenue : 'N/A'],
+      ['Net profit at target', m.d.netProfit],
+      ['Payback period (months)', m.d.paybackMonths],
+      ['Gross margin (%)', m.d.grossMarginPct],
+      ['Projected ROI (%)', m.d.roi],
+      [],
+      ['SENSITIVITY TABLE'],
+      ['Scenario','Volume','BE units','Revenue needed','ROI (%)','Verdict'],
+      ...m.sensitivity.map(s => [s.label, s.vol, isFinite(s.beUnits)?s.beUnits:'N/A', isFinite(s.beRevenue)?s.beRevenue:'N/A', s.roi, s.verdict])
+    ];
+    const wsBe = XLSX.utils.aoa_to_sheet(beSheet);
+    wsBe['!cols'] = [{wch:28},{wch:14},{wch:12},{wch:16},{wch:10},{wch:10}];
+    XLSX.utils.book_append_sheet(wb, wsBe, 'Break-Even & Sensitivity');
+
+    // Sheet 6: Budget & Schedule (EVM)
+    const evmSheet = [
+      ['Budget & Schedule Performance — EVM'],
+      [],
+      ['Resource','Plan cost to date','Earned value','Actual cost','Variance','Status'],
+      ...m.evm.perResource.map(r => [r.desc, Math.round(r.plannedCost), Math.round(r.earnedValue), Math.round(r.actualCost), Math.round(r.variance), r.status]),
+      [],
+      ['Total PV', m.evm.PV],
+      ['Total EV', m.evm.EV],
+      ['Total AC', m.evm.AC],
+      ['CPI', m.evm.CPI],
+      ['SPI', m.evm.SPI],
+      ['BAC', m.evm.BAC],
+      ['EAC (labour)', m.evm.EAC],
+      ['Projected total project cost', m.evm.projectedTotalCost],
+      ['Variance at completion (vs. original budget)', m.d.totalProject - m.evm.projectedTotalCost],
+    ];
+    const wsEvm = XLSX.utils.aoa_to_sheet(evmSheet);
+    wsEvm['!cols'] = [{wch:28},{wch:16},{wch:14},{wch:14},{wch:12},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, wsEvm, 'Budget & Schedule (EVM)');
+
+    const filename = safeFilename(getStr('f-projName','TCTP_Project')) + '_Financial_Model.xlsx';
+    XLSX.writeFile(wb, filename);
+    showExportStatus('Excel workbook downloaded: ' + filename, 'success');
+  } catch (err) {
+    console.error(err);
+    showExportStatus('Excel export failed: ' + err.message, 'error');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// POWERPOINT EXPORT (PptxGenJS)
+// ─────────────────────────────────────────────────────────────────────
+function exportPPTX() {
+  toggleExportMenu();
+  if (typeof PptxGenJS === 'undefined') {
+    showExportStatus('PowerPoint library failed to load — check your internet connection and try again.', 'error');
+    return;
+  }
+  showExportStatus('Building PowerPoint deck…', 'loading');
+
+  try {
+    const m = buildExportModel();
+    const c = m.c;
+    const NAVY = "1E2761", ICE = "CADCFC", WHITE = "FFFFFF", INK = "0F1923", GREY = "5B6B7A";
+    const GREEN = "2DBE6C", GREEN_LT = "DEF7E8", AMBER = "E0A030", AMBER_LT = "FBEFD9", RED = "E0556A", RED_LT="FBE3E7";
+    const FONT_HEAD = "Cambria", FONT_BODY = "Calibri";
+    const fmtM = n => { if(!isFinite(n)) return '∞'; if (Math.abs(n)>=1e6) return c+(n/1e6).toFixed(2)+'M'; if(Math.abs(n)>=1e3) return c+(n/1e3).toFixed(1)+'k'; return c+Math.round(n).toLocaleString(); };
+    const fmtF = n => isFinite(n) ? c+Math.round(n).toLocaleString() : '∞';
+
+    let pres = new PptxGenJS();
+    pres.layout = 'LAYOUT_WIDE';
+    pres.title = getStr('f-projName','TCTP Project') + ' — Financial Evaluation';
+
+    const verdictColor = m.verdict === 'Go' ? GREEN : m.verdict === 'Caution' ? AMBER : RED;
+    const verdictBg = m.verdict === 'Go' ? GREEN_LT : m.verdict === 'Caution' ? AMBER_LT : RED_LT;
+
+    // SLIDE 1 — TITLE
+    let s1 = pres.addSlide();
+    s1.background = { color: NAVY };
+    s1.addText("TCTP", { x:0.7,y:0.7,w:4,h:0.6, fontFace:FONT_BODY, fontSize:14, color:ICE, bold:true, charSpacing:4 });
+    s1.addText("Target Cost · Target Profit", { x:0.7,y:1.05,w:5,h:0.4, fontFace:FONT_BODY, fontSize:11, color:"8896C4" });
+    s1.addText(getStr('f-projName','Project'), { x:0.7,y:2.6,w:11.9,h:1.4, fontFace:FONT_HEAD, fontSize:40, bold:true, color:WHITE, valign:"bottom" });
+    s1.addText(getStr('f-projDesc',''), { x:0.7,y:4.0,w:10,h:0.6, fontFace:FONT_BODY, fontSize:15, italic:true, color:ICE });
+    s1.addText("Financial Evaluation Report", { x:0.7,y:4.7,w:8,h:0.5, fontFace:FONT_BODY, fontSize:13, color:"8896C4" });
+    const stats1 = [
+      {label:"TOTAL PROJECT COST", val:fmtM(m.d.totalProject)},
+      {label:"BREAK-EVEN UNITS", val: isFinite(m.beUnits)?m.beUnits.toLocaleString():'∞'},
+      {label:"PROJECTED ROI", val: Math.round(m.d.roi)+"%"},
+      {label:"PAYBACK PERIOD", val: isFinite(m.d.paybackMonths)&&m.d.paybackMonths>0 ? m.d.paybackMonths+" mo" : '∞'},
+    ];
+    stats1.forEach((s,i) => {
+      const x = 0.7 + i*3.05;
+      s1.addText(s.val, {x,y:6.1,w:2.9,h:0.55, fontFace:FONT_HEAD, fontSize:24, bold:true, color:ICE});
+      s1.addText(s.label, {x,y:6.65,w:2.9,h:0.3, fontFace:FONT_BODY, fontSize:9, color:"8896C4", charSpacing:1});
+    });
+
+    // SLIDE 2 — EXECUTIVE SUMMARY
+    let s2 = pres.addSlide();
+    s2.background = { color: WHITE };
+    s2.addText("Executive summary", {x:0.6,y:0.4,w:8,h:0.6, fontFace:FONT_HEAD, fontSize:26, bold:true, color:NAVY});
+    s2.addText("Go / Caution / No-Go verdict based on four financial thresholds", {x:0.6,y:0.95,w:8,h:0.4, fontFace:FONT_BODY, fontSize:12, color:GREY});
+    s2.addShape(pres.ShapeType.roundRect, {x:0.6,y:1.55,w:12.1,h:1.4, rectRadius:0.08, fill:{color:verdictBg}, line:{color:verdictColor,width:1}});
+    s2.addText(m.verdict.toUpperCase() + " — " + m.passCount + "/4 tests pass", {x:0.95,y:1.7,w:8,h:0.5, fontFace:FONT_HEAD, fontSize:20, bold:true, color:INK});
+    s2.addText(`Break-even of ${isFinite(m.beUnits)?m.beUnits.toLocaleString():'∞'} units vs. target of ${m.volume.toLocaleString()}. ROI ${Math.round(m.d.roi)}%, payback ${isFinite(m.d.paybackMonths)&&m.d.paybackMonths>0?m.d.paybackMonths+' months':'N/A'}.`,
+      {x:0.95,y:2.2,w:11.4,h:0.65, fontFace:FONT_BODY, fontSize:12, color:INK});
+    const metrics = [
+      {label:"Break-even", val:(isFinite(m.beUnits)?m.beUnits.toLocaleString():'∞')+' units', sub:'vs. '+m.volume.toLocaleString()+' target'},
+      {label:"Projected ROI", val:Math.round(m.d.roi)+'%', sub:'Threshold: '+m.d.minROI+'%'},
+      {label:"Payback", val:(isFinite(m.d.paybackMonths)&&m.d.paybackMonths>0?m.d.paybackMonths+' mo':'∞'), sub:'Threshold: '+m.d.maxPayback+' mo'},
+      {label:"Gross margin", val:Math.round(m.d.grossMarginPct)+'%', sub:'Threshold: '+m.d.minMarginPct+'%'},
+    ];
+    metrics.forEach((mm,i) => {
+      const x = 0.6 + i*3.08;
+      s2.addShape(pres.ShapeType.roundRect, {x,y:3.3,w:2.9,h:1.5, rectRadius:0.06, fill:{color:WHITE}, line:{color:"E8ECF2",width:1}});
+      s2.addText(mm.label.toUpperCase(), {x:x+0.18,y:3.45,w:2.5,h:0.3, fontFace:FONT_BODY, fontSize:9, bold:true, color:GREY, charSpacing:1});
+      s2.addText(mm.val, {x:x+0.18,y:3.72,w:2.5,h:0.6, fontFace:FONT_HEAD, fontSize:24, bold:true, color:NAVY});
+      s2.addText(mm.sub, {x:x+0.18,y:4.35,w:2.5,h:0.3, fontFace:FONT_BODY, fontSize:9, color:GREY});
+    });
+    s2.addShape(pres.ShapeType.roundRect, {x:0.6,y:5.1,w:12.1,h:1.7, rectRadius:0.08, fill:{color:NAVY}});
+    s2.addText("Key takeaway", {x:0.95,y:5.3,w:4,h:0.35, fontFace:FONT_BODY, fontSize:11, bold:true, color:ICE, charSpacing:1});
+    s2.addText(`Selling ${m.beUnits} units at ${fmtF(m.d.sellingPrice)} covers the ${fmtM(m.d.totalProject)} investment. At target volume, net profit is ${fmtM(m.d.netProfit)}.`,
+      {x:0.95,y:5.65,w:11.4,h:1.0, fontFace:FONT_BODY, fontSize:13, color:WHITE});
+
+    // SLIDE 3 — COST BREAKDOWN
+    let s3 = pres.addSlide();
+    s3.background = {color:WHITE};
+    s3.addText("Cost breakdown by category", {x:0.6,y:0.4,w:9,h:0.6, fontFace:FONT_HEAD, fontSize:26, bold:true, color:NAVY});
+    s3.addText(`Total project cost: ${fmtF(m.d.totalProject)} over ${m.d.duration} months`, {x:0.6,y:0.95,w:9,h:0.4, fontFace:FONT_BODY, fontSize:12, color:GREY});
+    const catData = CATS.map(cat => ({label: CAT_LABELS[cat], value: m.d.catTotals[cat].total, color: CAT_COLORS[cat].replace('#','')}));
+    s3.addChart(pres.ChartType.bar, [{name:"Cost", labels:catData.map(x=>x.label), values:catData.map(x=>x.value)}], {
+      x:0.5,y:1.5,w:7.2,h:5.4, barDir:"bar", chartColors:catData.map(x=>x.color), varyColors:true,
+      showValue:true, dataLabelFormatCode:'$#,##0', showLegend:false,
+    });
+    const catTotal = catData.reduce((a,b)=>a+b.value,0);
+    catData.forEach((cat,i) => {
+      const pct = catTotal>0?Math.round(cat.value/catTotal*100):0;
+      const y = 1.6+i*0.95;
+      s3.addShape(pres.ShapeType.ellipse, {x:8.0,y:y+0.05,w:0.18,h:0.18, fill:{color:cat.color}});
+      s3.addText(cat.label, {x:8.3,y:y-0.08,w:4.2,h:0.35, fontFace:FONT_BODY, fontSize:12, bold:true, color:INK});
+      s3.addText(`${fmtF(cat.value)} · ${pct}% of total`, {x:8.3,y:y+0.25,w:4.2,h:0.3, fontFace:FONT_BODY, fontSize:10, color:GREY});
+    });
+
+    // SLIDE 4 — SENSITIVITY
+    let s4 = pres.addSlide();
+    s4.background = {color:WHITE};
+    s4.addText("Sensitivity analysis", {x:0.6,y:0.4,w:9,h:0.6, fontFace:FONT_HEAD, fontSize:26, bold:true, color:NAVY});
+    s4.addText("How the verdict changes across cost, price, and volume scenarios", {x:0.6,y:0.95,w:9,h:0.4, fontFace:FONT_BODY, fontSize:12, color:GREY});
+    const tRows = [[
+      {text:"Scenario", options:{fill:{color:NAVY},color:WHITE,bold:true,fontFace:FONT_BODY,fontSize:10}},
+      {text:"BE units", options:{fill:{color:NAVY},color:WHITE,bold:true,fontFace:FONT_BODY,fontSize:10,align:"center"}},
+      {text:"ROI", options:{fill:{color:NAVY},color:WHITE,bold:true,fontFace:FONT_BODY,fontSize:10,align:"center"}},
+      {text:"Verdict", options:{fill:{color:NAVY},color:WHITE,bold:true,fontFace:FONT_BODY,fontSize:10,align:"center"}},
+    ]];
+    m.sensitivity.forEach((s,i) => {
+      const bg = i%2===0?"FFFFFF":"F7FAFC";
+      const vc = s.verdict==='Go'?GREEN:s.verdict==='Caution'?AMBER:RED;
+      const vbg = s.verdict==='Go'?GREEN_LT:s.verdict==='Caution'?AMBER_LT:RED_LT;
+      tRows.push([
+        {text:s.label, options:{fill:{color:bg},color:INK,fontFace:FONT_BODY,fontSize:10}},
+        {text:isFinite(s.beUnits)?s.beUnits.toLocaleString():'∞', options:{fill:{color:bg},color:INK,fontFace:FONT_BODY,fontSize:10,align:"center"}},
+        {text:s.roi+'%', options:{fill:{color:bg},color:s.roi>=0?"166534":"991B1B",bold:true,fontFace:FONT_BODY,fontSize:10,align:"center"}},
+        {text:s.verdict, options:{fill:{color:vbg},color:vc,bold:true,fontFace:FONT_BODY,fontSize:10,align:"center"}},
+      ]);
+    });
+    s4.addTable(tRows, {x:0.6,y:1.6,w:12.1,h:4.6, colW:[6.1,2.0,2.0,2.0], border:{pt:0.5,color:"DDE4EB"}, autoPage:false, valign:"middle", rowH:0.5});
+
+    // SLIDE 5 — BUDGET & SCHEDULE (EVM)
+    let s5 = pres.addSlide();
+    s5.background = {color:WHITE};
+    s5.addText("Budget & schedule performance", {x:0.6,y:0.4,w:9,h:0.6, fontFace:FONT_HEAD, fontSize:26, bold:true, color:NAVY});
+    s5.addText(`Earned Value Management — as of month ${m.evm.currentMonth} of ${m.evm.duration}`, {x:0.6,y:0.95,w:9,h:0.4, fontFace:FONT_BODY, fontSize:12, color:GREY});
+    const evmOk = m.evm.CPI>=1 && m.evm.SPI>=1;
+    const evmBg = evmOk?GREEN_LT:(m.evm.CPI<1&&m.evm.SPI<1)?RED_LT:AMBER_LT;
+    const evmTextColor = evmOk?"166534":(m.evm.CPI<1&&m.evm.SPI<1)?"991B1B":"92400E";
+    s5.addShape(pres.ShapeType.roundRect, {x:0.6,y:1.5,w:12.1,h:1.0, rectRadius:0.08, fill:{color:evmBg}});
+    s5.addText(evmOk?"On track":"Performance variance detected", {x:0.9,y:1.65,w:10,h:0.4, fontFace:FONT_HEAD, fontSize:15, bold:true, color:evmTextColor});
+    s5.addText(`Labour CPI ${m.evm.CPI.toFixed(2)}, SPI ${m.evm.SPI.toFixed(2)}. Projected total project cost: ${fmtF(m.evm.projectedTotalCost)} vs. ${fmtF(m.d.totalProject)} original budget.`,
+      {x:0.9,y:2.05,w:11.3,h:0.4, fontFace:FONT_BODY, fontSize:11, color:evmTextColor});
+    const evmMetrics = [
+      {label:"CPI (labour)", val:m.evm.CPI.toFixed(2), ok:m.evm.CPI>=1},
+      {label:"SPI (labour)", val:m.evm.SPI.toFixed(2), ok:m.evm.SPI>=1},
+      {label:"Projected total cost", val:fmtM(m.evm.projectedTotalCost), ok:m.evm.projectedTotalCost<=m.d.totalProject},
+      {label:"Variance at completion", val:fmtM(m.d.totalProject-m.evm.projectedTotalCost), ok:(m.d.totalProject-m.evm.projectedTotalCost)>=0},
+    ];
+    evmMetrics.forEach((mm,i) => {
+      const x = 0.6+i*3.08;
+      const col = mm.ok?GREEN:RED, bg = mm.ok?GREEN_LT:RED_LT;
+      s5.addShape(pres.ShapeType.roundRect, {x,y:2.8,w:2.9,h:1.5, rectRadius:0.06, fill:{color:bg}, line:{color:col,width:1}});
+      s5.addText(mm.label.toUpperCase(), {x:x+0.18,y:2.95,w:2.5,h:0.4, fontFace:FONT_BODY, fontSize:8.5, bold:true, color:GREY, charSpacing:0.5});
+      s5.addText(mm.val, {x:x+0.18,y:3.35,w:2.5,h:0.6, fontFace:FONT_HEAD, fontSize:22, bold:true, color:col});
+    });
+    s5.addText("Top resource variances", {x:0.6,y:4.7,w:6,h:0.4, fontFace:FONT_BODY, fontSize:13, bold:true, color:NAVY});
+    const sortedRes = [...m.evm.perResource].sort((a,b)=>a.variance-b.variance).slice(0,3);
+    sortedRes.forEach((r,i) => {
+      s5.addText("•", {x:0.6,y:5.15+i*0.5,w:0.3,h:0.4, fontFace:FONT_BODY, fontSize:13, color:"7C6FE0", bold:true});
+      s5.addText(`${r.desc}: ${fmtF(r.variance)} variance (planned ${fmtF(r.plannedCost)}, actual ${fmtF(r.actualCost)})`,
+        {x:0.95,y:5.15+i*0.5,w:11.6,h:0.45, fontFace:FONT_BODY, fontSize:11.5, color:INK});
+    });
+
+    // SLIDE 6 — RECOMMENDATION
+    let s6 = pres.addSlide();
+    s6.background = {color:NAVY};
+    s6.addText("Recommendation & next steps", {x:0.7,y:0.6,w:10,h:0.7, fontFace:FONT_HEAD, fontSize:28, bold:true, color:WHITE});
+    s6.addShape(pres.ShapeType.roundRect, {x:0.7,y:1.6,w:11.9,h:1.3, rectRadius:0.08, fill:{color:verdictBg}});
+    s6.addText((m.verdict==='Go'?'PROCEED':m.verdict==='Caution'?'PROCEED WITH CAUTION':'DO NOT PROCEED') + ` — ${m.passCount}/4 financial tests pass`,
+      {x:1.0,y:1.85,w:11,h:0.5, fontFace:FONT_HEAD, fontSize:17, bold:true, color:INK});
+    s6.addText(`Break-even at ${isFinite(m.beUnits)?m.beUnits.toLocaleString():'∞'} units vs. ${m.volume.toLocaleString()} target, ${Math.round(m.d.roi)}% ROI.`,
+      {x:1.0,y:2.3,w:11.3,h:0.5, fontFace:FONT_BODY, fontSize:12.5, color:INK});
+    const recItems = (document.getElementById('evm-recommendations') || {}).innerText || '';
+    const recLines = recItems.split('\n').filter(l => l.trim().length > 10).slice(0,4);
+    const fallbackRecs = ["Review cost inputs for accuracy before final approval.","Re-run sensitivity analysis as actuals come in.","Set a board checkpoint before committing further budget."];
+    const finalRecs = recLines.length ? recLines : fallbackRecs;
+    finalRecs.slice(0,4).forEach((rec,i) => {
+      const y = 3.3+i*0.95;
+      s6.addShape(pres.ShapeType.ellipse, {x:0.7,y,w:0.5,h:0.5, fill:{color:ICE}});
+      s6.addText(String(i+1), {x:0.7,y,w:0.5,h:0.5, fontFace:FONT_HEAD, fontSize:16, bold:true, color:NAVY, align:"center", valign:"middle"});
+      s6.addText(rec.slice(0,180), {x:1.4,y:y+0.02,w:11.1,h:0.85, fontFace:FONT_BODY, fontSize:12.5, color:WHITE});
+    });
+
+    const filename = safeFilename(getStr('f-projName','TCTP_Project')) + '_Executive_Summary.pptx';
+    pres.writeFile({ fileName: filename }).then(() => {
+      showExportStatus('PowerPoint deck downloaded: ' + filename, 'success');
+    });
+  } catch (err) {
+    console.error(err);
+    showExportStatus('PowerPoint export failed: ' + err.message, 'error');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// PDF EXPORT — uses the browser's native print, on the already-rendered
+// Report page (which is live and print-styled). This guarantees the PDF
+// always matches exactly what's on screen, with zero extra rendering risk.
+// ─────────────────────────────────────────────────────────────────────
+function exportPDF() {
+  toggleExportMenu();
+  showExportStatus('Opening print dialog — choose "Save as PDF" as the destination.', 'loading');
+  showPage('report');
+  setTimeout(() => {
+    window.print();
+    showExportStatus('Print dialog opened. Select "Save as PDF" to export.', 'success');
+  }, 200);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// JSON EXPORT — raw state dump for backup or re-import into another tool
+// ─────────────────────────────────────────────────────────────────────
+function exportJSON() {
+  toggleExportMenu();
+  try {
+    const state = {
+      projectName: getStr('f-projName',''), projectDesc: getStr('f-projDesc',''),
+      duration: getNum('f-duration',12), currency: getStr('f-currency','$'),
+      unitLabel: getStr('f-unitLabel',''), targetVolume: getNum('f-targetVol',500),
+      salesPeriod: getNum('f-salesPeriod',12), margin: getNum('f-margin',35),
+      sellingPriceOverride: getNum('f-sellingPrice',0), churn: getNum('f-churn',3),
+      growth: getNum('f-growth',10), costBuffer: getNum('f-costBuffer',15),
+      minROI: getNum('f-minROI',15), maxPayback: getNum('f-maxPayback',36),
+      minMargin: getNum('f-minMargin',20), volOpt: getNum('f-volOpt',800),
+      volBase: getNum('f-volBase',500), volPess: getNum('f-volPess',200),
+      stdHours: getNum('f-stdHours',160), currentMonth: getNum('f-currentMonth',6),
+      rows, actualHours,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = safeFilename(getStr('f-projName','TCTP_Project')) + '_data.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showExportStatus('Raw data exported as JSON.', 'success');
+  } catch (err) {
+    console.error(err);
+    showExportStatus('JSON export failed: ' + err.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════
+seedDefaults();
+seedActualHours();
+rebuildTrackingTable();
+recalcAll();
+</script>
+</body>
+</html>

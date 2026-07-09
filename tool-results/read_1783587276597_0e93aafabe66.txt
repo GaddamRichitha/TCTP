@@ -1,0 +1,502 @@
+  1000→  1000→    <!-- Recommendations -->
+  1001→  1001→    <div class="card">
+  1002→  1002→      <div class="card-header"><div><div class="card-title">Recommendations to improve cost performance</div><div class="card-sub">Generated live from your current CPI, SPI, and resource variance data</div></div></div>
+  1003→  1003→      <div id="evm-recommendations"></div>
+  1004→  1004→    </div>
+  1005→  1005→
+  1006→  1006→  </div>
+  1007→  1007→</div>
+  1008→  1008→
+  1009→  1009→<!-- ══ PAGE: ASSUMPTIONS ════════════════════════════════════════ -->
+  1010→  1010→<div class="page" id="page-assumptions">
+  1011→  1011→  <div class="page-header">
+  1012→  1012→    <div><div class="ph-title">Assumptions &amp; targets</div><div class="ph-sub">Set your pricing strategy, profit target, and scenario variables</div></div>
+  1013→  1013→    <div class="ph-actions">
+  1014→  1014→      <button class="btn btn-secondary" onclick="showPage('costs')">← Costs</button>
+  1015→  1015→      <button class="btn btn-primary" onclick="showPage('analysis')">Next: Analysis →</button>
+  1016→  1016→    </div>
+  1017→  1017→  </div>
+  1018→  1018→  <div class="content">
+  1019→  1019→
+  1020→  1020→    <div class="card section-gap">
+  1021→  1021→      <div class="card-header"><div><div class="card-title">Pricing strategy</div></div></div>
+  1022→  1022→      <div class="form-grid g2">
+  1023→  1023→        <div class="field">
+  1024→  1024→          <label class="field-label" data-tip="Your desired profit as % of revenue. The selling price is derived from this + cost/unit.">Target profit margin (%)</label>
+  1025→  1025→          <div class="range-row">
+  1026→  1026→            <input type="range" id="f-margin" min="1" max="90" step="1" value="35" oninput="recalcAll()">
+  1027→  1027→            <div class="range-val" id="rv-margin">35%</div>
+  1028→  1028→          </div>
+  1029→  1029→          <div class="field-hint">Derived selling price = Cost per unit ÷ (1 – margin%)</div>
+  1030→  1030→        </div>
+  1031→  1031→        <div class="field">
+  1032→  1032→          <label class="field-label">Manual selling price (leave blank to auto-derive)</label>
+  1033→  1033→          <input type="number" id="f-sellingPrice" placeholder="Auto-calculated from margin" oninput="recalcAll()">
+  1034→  1034→          <div class="field-hint" id="fh-derived-price">Set above, or override here</div>
+  1035→  1035→        </div>
+  1036→  1036→        <div class="field">
+  1037→  1037→          <label class="field-label" data-tip="Expected monthly revenue growth after launch — e.g. from upsells or new customers">Annual price / volume growth (%)</label>
+  1038→  1038→          <div class="range-row">
+  1039→  1039→            <input type="range" id="f-growth" min="0" max="50" step="1" value="10" oninput="recalcAll()">
+  1040→  1040→            <div class="range-val" id="rv-growth">10%</div>
+  1041→  1041→          </div>
+  1042→  1042→        </div>
+  1043→  1043→        <div class="field">
+  1044→  1044→          <label class="field-label" data-tip="Monthly customer churn — percentage of customers who cancel each month">Monthly churn rate (%)</label>
+  1045→  1045→          <div class="range-row">
+  1046→  1046→            <input type="range" id="f-churn" min="0" max="20" step="0.5" value="3" oninput="recalcAll()">
+  1047→  1047→            <div class="range-val" id="rv-churn">3%</div>
+  1048→  1048→          </div>
+  1049→  1049→        </div>
+  1050→  1050→      </div>
+  1051→  1051→    </div>
+  1052→  1052→
+  1053→  1053→    <div class="card section-gap">
+  1054→  1054→      <div class="card-header"><div><div class="card-title">Scenario volumes</div><div class="card-sub">Three scenarios drive the sensitivity analysis and verdict</div></div></div>
+  1055→  1055→      <div class="form-grid g3">
+  1056→  1056→        <div class="field">
+  1057→  1057→          <label class="field-label">Optimistic volume (units)</label>
+  1058→  1058→          <input type="number" id="f-volOpt" value="800" oninput="recalcAll()">
+  1059→  1059→          <div class="field-hint">Best case — strong market uptake</div>
+  1060→  1060→        </div>
+  1061→  1061→        <div class="field">
+  1062→  1062→          <label class="field-label">Base case volume (units)</label>
+  1063→  1063→          <input type="number" id="f-volBase" value="500" oninput="recalcAll()">
+  1064→  1064→          <div class="field-hint">Expected — mirrors your target volume</div>
+  1065→  1065→        </div>
+  1066→  1066→        <div class="field">
+  1067→  1067→          <label class="field-label">Pessimistic volume (units)</label>
+  1068→  1068→          <input type="number" id="f-volPess" value="200" oninput="recalcAll()">
+  1069→  1069→          <div class="field-hint">Worst case — slow adoption</div>
+  1070→  1070→        </div>
+  1071→  1071→      </div>
+  1072→  1072→    </div>
+  1073→  1073→
+  1074→  1074→    <div class="card section-gap">
+  1075→  1075→      <div class="card-header"><div><div class="card-title">Risk buffers</div><div class="card-sub">Applied in worst-case sensitivity scenarios</div></div></div>
+  1076→  1076→      <div class="form-grid g2">
+  1077→  1077→        <div class="field">
+  1078→  1078→          <label class="field-label" data-tip="Added to total cost in overrun scenarios to model risk">Cost overrun buffer (%)</label>
+  1079→  1079→          <div class="range-row">
+  1080→  1080→            <input type="range" id="f-costBuffer" min="0" max="50" step="1" value="15" oninput="recalcAll()">
+  1081→  1081→            <div class="range-val" id="rv-costBuffer">15%</div>
+  1082→  1082→          </div>
+  1083→  1083→        </div>
+  1084→  1084→        <div class="field">
+  1085→  1085→          <label class="field-label" data-tip="Minimum ROI % required to flag as Go">Minimum ROI threshold (%)</label>
+  1086→  1086→          <input type="number" id="f-minROI" value="15" min="0" oninput="recalcAll()">
+  1087→  1087→        </div>
+  1088→  1088→        <div class="field">
+  1089→  1089→          <label class="field-label" data-tip="Maximum payback period in months to still flag as Go">Max payback period (months)</label>
+  1090→  1090→          <input type="number" id="f-maxPayback" value="36" min="1" oninput="recalcAll()">
+  1091→  1091→        </div>
+  1092→  1092→        <div class="field">
+  1093→  1093→          <label class="field-label" data-tip="Minimum gross margin % required to flag as Go">Minimum gross margin (%)</label>
+  1094→  1094→          <input type="number" id="f-minMargin" value="20" min="0" oninput="recalcAll()">
+  1095→  1095→        </div>
+  1096→  1096→      </div>
+  1097→  1097→    </div>
+  1098→  1098→
+  1099→  1099→    <div class="card">
+  1100→  1100→      <div class="card-header"><div><div class="card-title">Live derived outputs from assumptions</div></div></div>
+  1101→  1101→      <div class="metric-grid mg-4">
+  1102→  1102→        <div class="metric-card blue"><div class="mc-label">Derived price</div><div class="mc-value" id="ass-price">—</div><div class="mc-sub">per unit sold</div></div>
+  1103→  1103→        <div class="metric-card"><div class="mc-label">Cost per unit</div><div class="mc-value" id="ass-cpu">—</div><div class="mc-sub">at base volume</div></div>
+  1104→  1104→        <div class="metric-card green"><div class="mc-label">Target revenue</div><div class="mc-value" id="ass-rev">—</div><div class="mc-sub">base case</div></div>
+  1105→  1105→        <div class="metric-card purple"><div class="mc-label">Effective churn impact</div><div class="mc-value" id="ass-churn">—</div><div class="mc-sub">units lost / yr</div></div>
+  1106→  1106→      </div>
+  1107→  1107→    </div>
+  1108→  1108→
+  1109→  1109→  </div>
+  1110→  1110→</div>
+  1111→  1111→
+  1112→  1112→<!-- ══ PAGE: ANALYSIS ══════════════════════════════════════════ -->
+  1113→  1113→<div class="page" id="page-analysis">
+  1114→  1114→  <div class="page-header">
+  1115→  1115→    <div><div class="ph-title">Analysis</div><div class="ph-sub">Break-even, sensitivity, cash flow — all driven live from your inputs</div></div>
+  1116→  1116→    <div class="ph-actions">
+  1117→  1117→      <button class="btn btn-secondary" onclick="showPage('assumptions')">← Assumptions</button>
+  1118→  1118→      <button class="btn btn-primary" onclick="showPage('report')">View report →</button>
+  1119→  1119→    </div>
+  1120→  1120→  </div>
+  1121→  1121→  <div class="content">
+  1122→  1122→
+  1123→  1123→    <!-- Key metrics -->
+  1124→  1124→    <div class="metric-grid mg-3 section-gap" style="margin-bottom:16px">
+  1125→  1125→      <div class="metric-card blue"><div class="mc-label">Total project cost</div><div class="mc-value" id="an-totalCost">—</div><div class="mc-sub" id="an-totalCostSub">—</div></div>
+  1126→  1126→      <div class="metric-card"><div class="mc-label">Monthly burn rate</div><div class="mc-value" id="an-burn">—</div><div class="mc-sub">recurring / month</div></div>
+  1127→  1127→      <div class="metric-card amber"><div class="mc-label">One-time investment</div><div class="mc-value" id="an-onetime">—</div><div class="mc-sub">setup &amp; launch</div></div>
+  1128→  1128→    </div>
+  1129→  1129→
+  1130→  1130→    <div class="metric-grid mg-3 section-gap">
+  1131→  1131→      <div class="metric-card" id="mc-be"><div class="mc-label">Break-even units</div><div class="mc-value" id="an-beUnits">—</div><div class="mc-sub" id="an-beSub">—</div></div>
+  1132→  1132→      <div class="metric-card" id="mc-payback"><div class="mc-label">Payback period</div><div class="mc-value" id="an-payback">—</div><div class="mc-sub" id="an-paybackSub">—</div></div>
+  1133→  1133→      <div class="metric-card" id="mc-roi"><div class="mc-label">Projected ROI</div><div class="mc-value" id="an-roi">—</div><div class="mc-sub" id="an-roiSub">—</div></div>
+  1134→  1134→      <div class="metric-card" id="mc-gm"><div class="mc-label">Gross margin</div><div class="mc-value" id="an-gm">—</div><div class="mc-sub" id="an-gmSub">—</div></div>
+  1135→  1135→      <div class="metric-card" id="mc-berev"><div class="mc-label">Break-even revenue</div><div class="mc-value" id="an-beRev">—</div><div class="mc-sub">to recover all costs</div></div>
+  1136→  1136→      <div class="metric-card purple"><div class="mc-label">Net profit at target</div><div class="mc-value" id="an-netProfit">—</div><div class="mc-sub">base case</div></div>
+  1137→  1137→    </div>
+  1138→  1138→
+  1139→  1139→    <!-- Progress meter -->
+  1140→  1140→    <div class="card section-gap">
+  1141→  1141→      <div class="card-title" style="margin-bottom:12px">Break-even progress — target volume vs. required units</div>
+  1142→  1142→      <div class="progress-meter">
+  1143→  1143→        <div class="pm-row"><span>0</span><span id="pm-be-label">BE: — units</span><span id="pm-target-label">Target: — units</span></div>
+  1144→  1144→        <div class="pm-track"><div class="pm-fill" id="pm-fill" style="width:0%;background:var(--green)"></div></div>
+  1145→  1145→      </div>
+  1146→  1146→      <div style="font-size:12px;color:var(--ink3);margin-top:6px" id="pm-desc">Enter costs and targets to see break-even progress</div>
+  1147→  1147→    </div>
+  1148→  1148→
+  1149→  1149→    <!-- Tabs -->
+  1150→  1150→    <div class="tab-bar">
+  1151→  1151→      <button class="tab-btn active" onclick="showTab('cost-breakdown',this)">Cost breakdown</button>
+  1152→  1152→      <button class="tab-btn" onclick="showTab('sensitivity',this)">Sensitivity</button>
+  1153→  1153→      <button class="tab-btn" onclick="showTab('cashflow',this)">Cash flow</button>
+  1154→  1154→      <button class="tab-btn" onclick="showTab('waterfall',this)">Margin waterfall</button>
+  1155→  1155→    </div>
+  1156→  1156→
+  1157→  1157→    <!-- Cost breakdown -->
+  1158→  1158→    <div class="tab-panel active" id="tab-cost-breakdown">
+  1159→  1159→      <div class="card">
+  1160→  1160→        <div class="card-title" style="margin-bottom:14px">Cost by category</div>
+  1161→  1161→        <div class="bar-chart" id="cost-bar-chart"></div>
+  1162→  1162→        <div class="divider"></div>
+  1163→  1163→        <div id="cost-breakdown-table"></div>
+  1164→  1164→      </div>
+  1165→  1165→    </div>
+  1166→  1166→
+  1167→  1167→    <!-- Sensitivity -->
+  1168→  1168→    <div class="tab-panel" id="tab-sensitivity">
+  1169→  1169→      <div class="card">
+  1170→  1170→        <div class="card-title" style="margin-bottom:14px">Sensitivity analysis — 10 scenarios</div>
+  1171→  1171→        <div style="overflow-x:auto">
+  1172→  1172→          <table class="sens-table">
+  1173→  1173→            <thead><tr>
+  1174→  1174→              <th>Scenario</th>
+  1175→  1175→              <th class="r">BE units</th>
+  1176→  1176→              <th class="r">Revenue needed</th>
+  1177→  1177→              <th class="r">ROI</th>
+  1178→  1178→              <th class="r">Payback</th>
+  1179→  1179→              <th>Verdict</th>
+  1180→  1180→            </tr></thead>
+  1181→  1181→            <tbody id="sens-tbody"></tbody>
+  1182→  1182→          </table>
+  1183→  1183→        </div>
+  1184→  1184→      </div>
+  1185→  1185→    </div>
+  1186→  1186→
+  1187→  1187→    <!-- Cash flow -->
+  1188→  1188→    <div class="tab-panel" id="tab-cashflow">
+  1189→  1189→      <div class="card">
+  1190→  1190→        <div class="card-title" style="margin-bottom:14px">Cumulative cash flow — 24 months</div>
+  1191→  1191→        <div class="cf-chart" id="cf-chart"></div>
+  1192→  1192→      </div>
+  1193→  1193→    </div>
+  1194→  1194→
+  1195→  1195→    <!-- Waterfall -->
+  1196→  1196→    <div class="tab-panel" id="tab-waterfall">
+  1197→  1197→      <div class="card">
+  1198→  1198→        <div class="card-title" style="margin-bottom:14px">Revenue to profit waterfall</div>
+  1199→  1199→        <div class="waterfall" id="wf-chart"></div>
+  1200→  1200→      </div>
+  1201→  1201→    </div>
+  1202→  1202→
+  1203→  1203→  </div>
+  1204→  1204→</div>
+  1205→  1205→
+  1206→  1206→<!-- ══ PAGE: REPORT ════════════════════════════════════════════ -->
+  1207→  1207→<div class="page" id="page-report">
+  1208→  1208→  <div class="page-header">
+  1209→  1209→    <div><div class="ph-title">Financial report</div><div class="ph-sub">Live report — every number updates in real time as you change any input</div></div>
+  1210→  1210→    <div class="ph-actions" style="position:relative">
+  1211→  1211→      <button class="btn btn-secondary" onclick="showPage('analysis')">← Analysis</button>
+  1212→  1212→      <div style="position:relative;display:inline-block">
+  1213→  1213→        <button class="btn btn-primary" onclick="toggleExportMenu()" id="export-menu-btn">⬇ Export ▾</button>
+  1214→  1214→        <div id="export-menu" class="export-menu">
+  1215→  1215→          <div class="export-menu-item" onclick="exportExcel()">
+  1216→  1216→            <span class="export-icon" style="background:#e8f5e9;color:#1d7a3c">XLS</span>
+  1217→  1217→            <div><div class="export-item-title">Excel workbook</div><div class="export-item-sub">6 sheets, live formulas</div></div>
+  1218→  1218→          </div>
+  1219→  1219→          <div class="export-menu-item" onclick="exportPPTX()">
+  1220→  1220→            <span class="export-icon" style="background:#fde8e8;color:#c0392b">PPT</span>
+  1221→  1221→            <div><div class="export-item-title">PowerPoint deck</div><div class="export-item-sub">7-slide executive summary</div></div>
+  1222→  1222→          </div>
+  1223→  1223→          <div class="export-menu-item" onclick="exportPDF()">
+  1224→  1224→            <span class="export-icon" style="background:#e8eefd;color:#2952cc">PDF</span>
+  1225→  1225→            <div><div class="export-item-title">PDF report</div><div class="export-item-sub">Print-ready, 6 pages</div></div>
+  1226→  1226→          </div>
+  1227→  1227→          <div class="export-menu-item" onclick="exportJSON()">
+  1228→  1228→            <span class="export-icon" style="background:#f1f1f1;color:#555">{ }</span>
+  1229→  1229→            <div><div class="export-item-title">Raw data (JSON)</div><div class="export-item-sub">For re-import or backup</div></div>
+  1230→  1230→          </div>
+  1231→  1231→        </div>
+  1232→  1232→      </div>
+  1233→  1233→    </div>
+  1234→  1234→  </div>
+  1235→  1235→  <div id="export-status" class="export-status" style="display:none"></div>
+  1236→  1236→  <div class="content">
+  1237→  1237→
+  1238→  1238→    <!-- VERDICT -->
+  1239→  1239→    <div id="report-verdict" class="section-gap"></div>
+  1240→  1240→
+  1241→  1241→    <!-- DECISION CHECKLIST -->
+  1242→  1242→    <div class="card section-gap">
+  1243→  1243→      <div class="card-title" style="margin-bottom:12px">Decision checklist — 4 mandatory financial tests</div>
+  1244→  1244→      <div class="checklist" id="report-checklist"></div>
+  1245→  1245→    </div>
+  1246→  1246→
+  1247→  1247→    <!-- SUMMARY TABLE -->
+  1248→  1248→    <div class="card section-gap">
+  1249→  1249→      <div class="report-section">
+  1250→  1250→        <div class="rs-title">Project summary</div>
+  1251→  1251→        <table class="summary-table" id="report-summary-table"></table>
+  1252→  1252→      </div>
+  1253→  1253→    </div>
+  1254→  1254→
+  1255→  1255→    <!-- COST BREAKDOWN -->
+  1256→  1256→    <div class="card section-gap">
+  1257→  1257→      <div class="report-section">
+  1258→  1258→        <div class="rs-title">Cost breakdown by category</div>
+  1259→  1259→        <table class="summary-table" id="report-cost-table"></table>
+  1260→  1260→      </div>
+  1261→  1261→    </div>
+  1262→  1262→
+  1263→  1263→    <!-- KEY FORMULAS -->
+  1264→  1264→    <div class="card section-gap">
+  1265→  1265→      <div class="report-section">
+  1266→  1266→        <div class="rs-title">Key formulas used</div>
+  1267→  1267→        <table class="summary-table">
+  1268→  1268→          <tr><td>Total project cost</td><td>One-time costs + (Monthly recurring × Duration months)</td></tr>
+  1269→  1269→          <tr><td>Cost per unit</td><td>Total project cost ÷ Target volume + Variable cost per unit</td></tr>
+  1270→  1270→          <tr><td>Derived selling price</td><td>Cost per unit ÷ (1 − Target margin %)</td></tr>
+  1271→  1271→          <tr><td>Break-even units</td><td>Total fixed costs ÷ (Selling price − Variable cost per unit)</td></tr>
+  1272→  1272→          <tr><td>Gross margin</td><td>(Selling price − Cost per unit) ÷ Selling price × 100</td></tr>
+  1273→  1273→          <tr><td>Payback period</td><td>Total one-time costs ÷ Monthly net profit</td></tr>
+  1274→  1274→          <tr><td>Projected ROI</td><td>(Target revenue − Total cost) ÷ Total cost × 100</td></tr>
+  1275→  1275→        </table>
+  1276→  1276→      </div>
+  1277→  1277→    </div>
+  1278→  1278→
+  1279→  1279→    <!-- ASSUMPTIONS LOG -->
+  1280→  1280→    <div class="card section-gap">
+  1281→  1281→      <div class="report-section">
+  1282→  1282→        <div class="rs-title">Assumptions log</div>
+  1283→  1283→        <div id="report-assumptions" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+  1284→  1284→      </div>
+  1285→  1285→    </div>
+  1286→  1286→
+  1287→  1287→    <!-- ALL LINE ITEMS -->
+  1288→  1288→    <div class="card">
+  1289→  1289→      <div class="report-section">
+  1290→  1290→        <div class="rs-title">Full cost line items</div>
+  1291→  1291→        <table class="summary-table" id="report-line-items"></table>
+  1292→  1292→      </div>
+  1293→  1293→    </div>
+  1294→  1294→
+  1295→  1295→  </div>
+  1296→  1296→</div>
+  1297→  1297→
+  1298→  1298→</div><!-- /main -->
+  1299→  1299→</div><!-- /layout -->
+  1300→  1300→
+  1301→  1301→<script>
+  1302→  1302→// ═══════════════════════════════════════════════════════════════════
+  1303→  1303→// DATA STATE
+  1304→  1304→// ═══════════════════════════════════════════════════════════════════
+  1305→  1305→let rowIdCounter = 0;
+  1306→  1306→
+  1307→  1307→const CATS = ['labour','infra','apis','llm','overhead'];
+  1308→  1308→const CAT_COLORS = {
+  1309→  1309→  labour:   '#1a6cf0',
+  1310→  1310→  infra:    '#0ea8a8',
+  1311→  1311→  apis:     '#7c3aed',
+  1312→  1312→  llm:      '#d97706',
+  1313→  1313→  overhead: '#6b7280'
+  1314→  1314→};
+  1315→  1315→const CAT_LABELS = {
+  1316→  1316→  labour: 'Labour & team',
+  1317→  1317→  infra: 'Cloud / infra',
+  1318→  1318→  apis: 'APIs / SaaS',
+  1319→  1319→  llm: 'LLM / AI',
+  1320→  1320→  overhead: 'Overhead'
+  1321→  1321→};
+  1322→  1322→
+  1323→  1323→// rows[cat] = [{ id, desc, rate, qty, type, notes, rateBasis, plannedHours }]
+  1324→  1324→const rows = { labour:[], infra:[], apis:[], llm:[], overhead:[] };
+  1325→  1325→
+  1326→  1326→// actualHours[resourceId] = { 1: hrs, 2: hrs, ... } keyed by project month number
+  1327→  1327→const actualHours = {};
+  1328→  1328→const MAX_TRACK_MONTHS = 24;
+  1329→  1329→let lastTrackedDuration = null;
+  1330→  1330→
+  1331→  1331→// ═══════════════════════════════════════════════════════════════════
+  1332→  1332→// NAVIGATION
+  1333→  1333→// ═══════════════════════════════════════════════════════════════════
+  1334→  1334→function showPage(id) {
+  1335→  1335→  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  1336→  1336→  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  1337→  1337→  document.getElementById('page-'+id).classList.add('active');
+  1338→  1338→  document.getElementById('nav-'+id)?.classList.add('active');
+  1339→  1339→  recalcAll();
+  1340→  1340→}
+  1341→  1341→
+  1342→  1342→function scrollToCat(cat) {
+  1343→  1343→  const el = document.getElementById('cat-'+cat);
+  1344→  1344→  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  1345→  1345→}
+  1346→  1346→
+  1347→  1347→function showTab(id, btn) {
+  1348→  1348→  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  1349→  1349→  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  1350→  1350→  document.getElementById('tab-'+id).classList.add('active');
+  1351→  1351→  btn.classList.add('active');
+  1352→  1352→}
+  1353→  1353→
+  1354→  1354→// ═══════════════════════════════════════════════════════════════════
+  1355→  1355→// ROW MANAGEMENT
+  1356→  1356→// ═══════════════════════════════════════════════════════════════════
+  1357→  1357→function addRow(cat, data = {}) {
+  1358→  1358→  const id = 'r' + (++rowIdCounter);
+  1359→  1359→  const row = {
+  1360→  1360→    id,
+  1361→  1361→    desc:  data.desc  || '',
+  1362→  1362→    rate:  data.rate  !== undefined ? data.rate  : 0,
+  1363→  1363→    qty:   data.qty   !== undefined ? data.qty   : 1,
+  1364→  1364→    type:  data.type  || 'monthly',
+  1365→  1365→    notes: data.notes || '',
+  1366→  1366→    rateBasis:     data.rateBasis     || 'monthly',  // 'monthly' | 'hourly' — labour only
+  1367→  1367→    plannedHours:  data.plannedHours !== undefined ? data.plannedHours : 160, // hrs/mo — labour only
+  1368→  1368→  };
+  1369→  1369→  rows[cat].push(row);
+  1370→  1370→  renderRow(cat, row);
+  1371→  1371→  if (cat === 'labour') {
+  1372→  1372→    const tbody = document.getElementById('rows-tracking');
+  1373→  1373→    if (tbody) renderTrackingRow(row);
+  1374→  1374→  }
+  1375→  1375→  recalcAll();
+  1376→  1376→}
+  1377→  1377→
+  1378→  1378→function renderRow(cat, row) {
+  1379→  1379→  const tbody = document.getElementById('rows-'+cat);
+  1380→  1380→  const tr = document.createElement('tr');
+  1381→  1381→  tr.id = 'tr-' + row.id;
+  1382→  1382→  tr.setAttribute('data-cat', cat);
+  1383→  1383→  tr.setAttribute('data-id', row.id);
+  1384→  1384→
+  1385→  1385→  const typeOpts = `
+  1386→  1386→    <option value="monthly"  ${row.type==='monthly' ?'selected':''}>Monthly</option>
+  1387→  1387→    <option value="onetime"  ${row.type==='onetime' ?'selected':''}>One-time</option>
+  1388→  1388→    <option value="perunit"  ${row.type==='perunit' ?'selected':''}>Per-unit</option>
+  1389→  1389→  `;
+  1390→  1390→
+  1391→  1391→  if (cat === 'labour') {
+  1392→  1392→    const basisOpts = `
+  1393→  1393→      <option value="monthly" ${row.rateBasis==='monthly'?'selected':''}>Monthly salary</option>
+  1394→  1394→      <option value="hourly"  ${row.rateBasis==='hourly' ?'selected':''}>Hourly rate</option>
+  1395→  1395→    `;
+  1396→  1396→    tr.innerHTML = `
+  1397→  1397→      <td><input type="text" value="${esc(row.desc)}" placeholder="Role / description"
+  1398→  1398→        oninput="updateRowField('${cat}','${row.id}','desc',this.value); syncTrackingLabel('${row.id}',this.value)"></td>
+  1399→  1399→      <td><select onchange="updateRowField('${cat}','${row.id}','rateBasis',this.value)">${basisOpts}</select></td>
+  1400→  1400→      <td><input type="number" value="${row.rate}" min="0" step="0.01"
+  1401→  1401→        style="text-align:right"
+  1402→  1402→        oninput="updateRowField('${cat}','${row.id}','rate',parseFloat(this.value)||0)"></td>
+  1403→  1403→      <td><input type="number" value="${row.plannedHours}" min="0" step="1"
+  1404→  1404→        style="text-align:right"
+  1405→  1405→        oninput="updateRowField('${cat}','${row.id}','plannedHours',parseFloat(this.value)||0)"></td>
+  1406→  1406→      <td><input type="number" value="${row.qty}" min="0.01" step="0.01"
+  1407→  1407→        style="text-align:right"
+  1408→  1408→        oninput="updateRowField('${cat}','${row.id}','qty',parseFloat(this.value)||1)"></td>
+  1409→  1409→      <td><select onchange="updateRowField('${cat}','${row.id}','type',this.value)">${typeOpts}</select></td>
+  1410→  1410→      <td class="r row-total" id="rtot-${row.id}">—</td>
+  1411→  1411→      <td><input type="text" value="${esc(row.notes)}" placeholder="Optional"
+  1412→  1412→        oninput="updateRowField('${cat}','${row.id}','notes',this.value)"></td>
+  1413→  1413→      <td style="text-align:center">
+  1414→  1414→        <button class="btn btn-xs btn-danger" onclick="deleteRow('${cat}','${row.id}')" title="Remove">✕</button>
+  1415→  1415→      </td>
+  1416→  1416→    `;
+  1417→  1417→  } else {
+  1418→  1418→    tr.innerHTML = `
+  1419→  1419→      <td><input type="text" value="${esc(row.desc)}" placeholder="Description"
+  1420→  1420→        oninput="updateRowField('${cat}','${row.id}','desc',this.value)"></td>
+  1421→  1421→      <td><input type="number" value="${row.rate}" min="0" step="0.01"
+  1422→  1422→        style="text-align:right"
+  1423→  1423→        oninput="updateRowField('${cat}','${row.id}','rate',parseFloat(this.value)||0)"></td>
+  1424→  1424→      <td><input type="number" value="${row.qty}" min="0.01" step="0.01"
+  1425→  1425→        style="text-align:right"
+  1426→  1426→        oninput="updateRowField('${cat}','${row.id}','qty',parseFloat(this.value)||1)"></td>
+  1427→  1427→      <td><select onchange="updateRowField('${cat}','${row.id}','type',this.value)">${typeOpts}</select></td>
+  1428→  1428→      <td class="r row-total" id="rtot-${row.id}">—</td>
+  1429→  1429→      <td><input type="text" value="${esc(row.notes)}" placeholder="Optional"
+  1430→  1430→        oninput="updateRowField('${cat}','${row.id}','notes',this.value)"></td>
+  1431→  1431→      <td style="text-align:center">
+  1432→  1432→        <button class="btn btn-xs btn-danger" onclick="deleteRow('${cat}','${row.id}')" title="Remove">✕</button>
+  1433→  1433→      </td>
+  1434→  1434→    `;
+  1435→  1435→  }
+  1436→  1436→  tbody.appendChild(tr);
+  1437→  1437→}
+  1438→  1438→
+  1439→  1439→function updateRowField(cat, id, field, val) {
+  1440→  1440→  const row = rows[cat].find(r => r.id === id);
+  1441→  1441→  if (row) { row[field] = val; recalcAll(); }
+  1442→  1442→}
+  1443→  1443→
+  1444→  1444→function deleteRow(cat, id) {
+  1445→  1445→  rows[cat] = rows[cat].filter(r => r.id !== id);
+  1446→  1446→  const tr = document.getElementById('tr-'+id);
+  1447→  1447→  if (tr) tr.remove();
+  1448→  1448→  if (cat === 'labour') {
+  1449→  1449→    delete actualHours[id];
+  1450→  1450→    const trackTr = document.getElementById('track-tr-'+id);
+  1451→  1451→    if (trackTr) trackTr.remove();
+  1452→  1452→  }
+  1453→  1453→  recalcAll();
+  1454→  1454→}
+  1455→  1455→
+  1456→  1456→// ── TIME TRACKING TABLE RENDERING ──────────────────────────────────
+  1457→  1457→function renderTrackingHeader() {
+  1458→  1458→  const headerRow = document.getElementById('tracking-header-row');
+  1459→  1459→  if (!headerRow) return;
+  1460→  1460→  const duration = getNum('f-duration', 12);
+  1461→  1461→  const monthsToShow = Math.min(Math.max(duration, 1), MAX_TRACK_MONTHS);
+  1462→  1462→  // Rebuild header: Resource | Plan hrs/mo | Mo1 | Mo2 | ... | Total actual | Variance
+  1463→  1463→  let html = `<th style="width:180px;position:sticky;left:0;background:var(--surface);z-index:2">Resource</th>
+  1464→  1464→    <th style="width:90px">Plan hrs/mo</th>`;
+  1465→  1465→  for (let m = 1; m <= monthsToShow; m++) {
+  1466→  1466→    html += `<th style="width:64px;text-align:center">M${m}</th>`;
+  1467→  1467→  }
+  1468→  1468→  html += `<th style="width:90px;text-align:right">Total actual</th>
+  1469→  1469→    <th style="width:90px;text-align:right">Plan to date</th>
+  1470→  1470→    <th style="width:80px;text-align:center">Variance</th>`;
+  1471→  1471→  headerRow.innerHTML = html;
+  1472→  1472→}
+  1473→  1473→
+  1474→  1474→function renderTrackingRow(row) {
+  1475→  1475→  const tbody = document.getElementById('rows-tracking');
+  1476→  1476→  if (!tbody) return;
+  1477→  1477→  if (!actualHours[row.id]) actualHours[row.id] = {};
+  1478→  1478→
+  1479→  1479→  const duration = getNum('f-duration', 12);
+  1480→  1480→  const monthsToShow = Math.min(Math.max(duration, 1), MAX_TRACK_MONTHS);
+  1481→  1481→
+  1482→  1482→  const tr = document.createElement('tr');
+  1483→  1483→  tr.id = 'track-tr-' + row.id;
+  1484→  1484→  tr.setAttribute('data-id', row.id);
+  1485→  1485→
+  1486→  1486→  let html = `<td style="position:sticky;left:0;background:var(--surface);font-weight:600" id="track-label-${row.id}">${esc(row.desc) || '(unnamed role)'}</td>
+  1487→  1487→    <td class="r" id="track-plan-${row.id}" style="color:var(--ink3)">—</td>`;
+  1488→  1488→
+  1489→  1489→  for (let m = 1; m <= monthsToShow; m++) {
+  1490→  1490→    const val = actualHours[row.id][m] !== undefined ? actualHours[row.id][m] : '';
+  1491→  1491→    html += `<td><input type="number" min="0" step="1" value="${val}" placeholder="—"
+  1492→  1492→      style="text-align:center;width:56px"
+  1493→  1493→      oninput="updateActualHours('${row.id}',${m},this.value)"></td>`;
+  1494→  1494→  }
+  1495→  1495→
+  1496→  1496→  html += `<td class="r" id="track-total-${row.id}" style="font-weight:700">—</td>
+  1497→  1497→    <td class="r" id="track-todate-${row.id}" style="color:var(--ink3)">—</td>
+  1498→  1498→    <td style="text-align:center" id="track-status-${row.id}">—</td>`;
+  1499→  1499→
+
+[showing lines 1000-1499 of 2002; use offset=1500 with limit to continue reading]

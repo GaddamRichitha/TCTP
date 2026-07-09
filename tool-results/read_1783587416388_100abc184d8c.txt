@@ -1,0 +1,502 @@
+     1→     1→  1500→  1500→  tr.innerHTML = html;
+     2→     2→  1501→  1501→  tbody.appendChild(tr);
+     3→     3→  1502→  1502→}
+     4→     4→  1503→  1503→
+     5→     5→  1504→  1504→function rebuildTrackingTable() {
+     6→     6→  1505→  1505→  renderTrackingHeader();
+     7→     7→  1506→  1506→  const tbody = document.getElementById('rows-tracking');
+     8→     8→  1507→  1507→  if (!tbody) return;
+     9→     9→  1508→  1508→  tbody.innerHTML = '';
+    10→    10→  1509→  1509→  rows.labour.forEach(row => renderTrackingRow(row));
+    11→    11→  1510→  1510→}
+    12→    12→  1511→  1511→
+    13→    13→  1512→  1512→function updateActualHours(resourceId, month, val) {
+    14→    14→  1513→  1513→  if (!actualHours[resourceId]) actualHours[resourceId] = {};
+    15→    15→  1514→  1514→  const num = parseFloat(val);
+    16→    16→  1515→  1515→  if (val === '' || isNaN(num)) {
+    17→    17→  1516→  1516→    delete actualHours[resourceId][month];
+    18→    18→  1517→  1517→  } else {
+    19→    19→  1518→  1518→    actualHours[resourceId][month] = num;
+    20→    20→  1519→  1519→  }
+    21→    21→  1520→  1520→  recalcAll();
+    22→    22→  1521→  1521→}
+    23→    23→  1522→  1522→
+    24→    24→  1523→  1523→function syncTrackingLabel(resourceId, name) {
+    25→    25→  1524→  1524→  const el = document.getElementById('track-label-'+resourceId);
+    26→    26→  1525→  1525→  if (el) el.textContent = name || '(unnamed role)';
+    27→    27→  1526→  1526→}
+    28→    28→  1527→  1527→
+    29→    29→  1528→  1528→function esc(s) {
+    30→    30→  1529→  1529→  return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    31→    31→  1530→  1530→}
+    32→    32→  1531→  1531→
+    33→    33→  1532→  1532→// ═══════════════════════════════════════════════════════════════════
+    34→    34→  1533→  1533→// CORE CALCULATIONS
+    35→    35→  1534→  1534→// ═══════════════════════════════════════════════════════════════════
+    36→    36→  1535→  1535→function getNum(id, def = 0) {
+    37→    37→  1536→  1536→  const el = document.getElementById(id);
+    38→    38→  1537→  1537→  if (!el) return def;
+    39→    39→  1538→  1538→  const v = parseFloat(el.value);
+    40→    40→  1539→  1539→  return isNaN(v) ? def : v;
+    41→    41→  1540→  1540→}
+    42→    42→  1541→  1541→function getStr(id, def = '') {
+    43→    43→  1542→  1542→  const el = document.getElementById(id);
+    44→    44→  1543→  1543→  return el ? (el.value || def) : def;
+    45→    45→  1544→  1544→}
+    46→    46→  1545→  1545→
+    47→    47→  1546→  1546→function computeRowTotal(row, duration) {
+    48→    48→  1547→  1547→  const rate = parseFloat(row.rate) || 0;
+    49→    49→  1548→  1548→  const qty  = parseFloat(row.qty)  || 1;
+    50→    50→  1549→  1549→  if (row.type === 'monthly') {
+    51→    51→  1550→  1550→    const monthlyCost = getRowMonthlyCost(row);
+    52→    52→  1551→  1551→    return monthlyCost * qty * duration;
+    53→    53→  1552→  1552→  }
+    54→    54→  1553→  1553→  if (row.type === 'onetime')  return rate * qty;
+    55→    55→  1554→  1554→  if (row.type === 'perunit')  return 0; // counted separately
+    56→    56→  1555→  1555→  return 0;
+    57→    57→  1556→  1556→}
+    58→    58→  1557→  1557→
+    59→    59→  1558→  1558→// Resolves a labour row's effective monthly cost regardless of rate basis.
+    60→    60→  1559→  1559→// Monthly salary basis: rate IS the monthly cost.
+    61→    61→  1560→  1560→// Hourly basis: rate × plannedHours/month = monthly cost.
+    62→    62→  1561→  1561→// Non-labour categories always use rate directly (rateBasis is unused).
+    63→    63→  1562→  1562→function getRowMonthlyCost(row) {
+    64→    64→  1563→  1563→  const rate = parseFloat(row.rate) || 0;
+    65→    65→  1564→  1564→  if (row.rateBasis === 'hourly') {
+    66→    66→  1565→  1565→    const hrs = parseFloat(row.plannedHours) || 0;
+    67→    67→  1566→  1566→    return rate * hrs;
+    68→    68→  1567→  1567→  }
+    69→    69→  1568→  1568→  return rate; // monthly basis or non-labour category
+    70→    70→  1569→  1569→}
+    71→    71→  1570→  1570→
+    72→    72→  1571→  1571→// ═══════════════════════════════════════════════════════════════════
+    73→    73→  1572→  1572→// EARNED VALUE MANAGEMENT (EVM) ENGINE
+    74→    74→  1573→  1573→// ═══════════════════════════════════════════════════════════════════
+    75→    75→  1574→  1574→// PV (Planned Value)  = budgeted cost of work that SHOULD be done by current month
+    76→    76→  1575→  1575→// EV (Earned Value)    = budgeted cost of work ACTUALLY done by current month (here: actual hours × planned rate)
+    77→    77→  1576→  1576→// AC (Actual Cost)     = real cost incurred for hours actually worked (actual hours × rate)
+    78→    78→  1577→  1577→// CV = EV − AC   (negative = over budget)
+    79→    79→  1578→  1578→// SV = EV − PV   (negative = behind schedule)
+    80→    80→  1579→  1579→// CPI = EV / AC  (>1 = under budget, <1 = over budget)
+    81→    81→  1580→  1580→// SPI = EV / PV  (>1 = ahead of schedule, <1 = behind schedule)
+    82→    82→  1581→  1581→// EAC = AC + (BAC − EV) / CPI   (forecast total cost at completion)
+    83→    83→  1582→  1582→function computeEVM(d) {
+    84→    84→  1583→  1583→  const duration     = d.duration;
+    85→    85→  1584→  1584→  const currentMonth = Math.min(getNum('f-currentMonth', 1), duration);
+    86→    86→  1585→  1585→  const stdHours      = getNum('f-stdHours', 160);
+    87→    87→  1586→  1586→
+    88→    88→  1587→  1587→  let PV = 0, EV = 0, AC = 0;
+    89→    89→  1588→  1588→  let BAC = 0; // Budget at completion (total planned labour cost across full duration)
+    90→    90→  1589→  1589→
+    91→    91→  1590→  1590→  const perResource = [];
+    92→    92→  1591→  1591→
+    93→    93→  1592→  1592→  rows.labour.forEach(row => {
+    94→    94→  1593→  1593→    const rate = parseFloat(row.rate) || 0;
+    95→    95→  1594→  1594→    const qty  = parseFloat(row.qty)  || 1;
+    96→    96→  1595→  1595→    const plannedHoursPerMonth = row.rateBasis === 'hourly'
+    97→    97→  1596→  1596→      ? (parseFloat(row.plannedHours) || 0)
+    98→    98→  1597→  1597→      : stdHours; // for monthly-salary resources, assume standard hours as the "planned" baseline
+    99→    99→  1598→  1598→    const monthlyCost = getRowMonthlyCost(row); // full planned cost per month for this resource
+   100→   100→  1599→  1599→    const impliedHourlyRate = plannedHoursPerMonth > 0 ? monthlyCost / plannedHoursPerMonth : 0;
+   101→   101→  1600→  1600→
+   102→   102→  1601→  1601→    let resPV = 0, resEV = 0, resAC = 0, planHoursToDate = 0, actualHoursToDate = 0;
+   103→   103→  1602→  1602→
+   104→   104→  1603→  1603→    for (let m = 1; m <= duration; m++) {
+   105→   105→  1604→  1604→      const plannedHrsThisMonth = plannedHoursPerMonth;
+   106→   106→  1605→  1605→      const isPast = m <= currentMonth;
+   107→   107→  1606→  1606→
+   108→   108→  1607→  1607→      // Planned value accrues every month up to current month regardless of actuals
+   109→   109→  1608→  1608→      if (isPast) {
+   110→   110→  1609→  1609→        resPV += monthlyCost * qty;
+   111→   111→  1610→  1610→        planHoursToDate += plannedHrsThisMonth * qty;
+   112→   112→  1611→  1611→      }
+   113→   113→  1612→  1612→
+   114→   114→  1613→  1613→      if (isPast) {
+   115→   115→  1614→  1614→        const actualHrs = actualHours[row.id] && actualHours[row.id][m] !== undefined
+   116→   116→  1615→  1615→          ? actualHours[row.id][m]
+   117→   117→  1616→  1616→          : plannedHrsThisMonth; // unlogged past months assumed on-plan
+   118→   118→  1617→  1617→        actualHoursToDate += actualHrs * qty;
+   119→   119→  1618→  1618→
+   120→   120→  1619→  1619→        // % of this month's planned work actually completed. Hours worked is our best
+   121→   121→  1620→  1620→        // available proxy for progress: working fewer hours than planned means less of
+   122→   122→  1621→  1621→        // the month's scope got done (schedule slip); working more hours doesn't earn
+   123→   123→  1622→  1622→        // MORE value than was scoped — it just means it cost more to deliver the same
+   124→   124→  1623→  1623→        // scope (cost overrun). Capped at 100% — you can't out-earn the month's scope.
+   125→   125→  1624→  1624→        const pctComplete = plannedHrsThisMonth > 0 ? Math.min(actualHrs / plannedHrsThisMonth, 1.0) : 1.0;
+   126→   126→  1625→  1625→        resEV += monthlyCost * qty * pctComplete;
+   127→   127→  1626→  1626→
+   128→   128→  1627→  1627→        // Actual cost = actual hours actually worked × implied hourly rate — this is
+   129→   129→  1628→  1628→        // what really varies when someone works more or fewer hours than planned,
+   130→   130→  1629→  1629→        // and is what diverges from EV to produce a genuine CPI signal.
+   131→   131→  1630→  1630→        resAC += impliedHourlyRate * actualHrs * qty;
+   132→   132→  1631→  1631→      }
+   133→   133→  1632→  1632→    }
+   134→   134→  1633→  1633→
+   135→   135→  1634→  1634→    BAC += monthlyCost * qty * duration;
+   136→   136→  1635→  1635→
+   137→   137→  1636→  1636→    PV += resPV;
+   138→   138→  1637→  1637→    EV += resEV;
+   139→   139→  1638→  1638→    AC += resAC;
+   140→   140→  1639→  1639→
+   141→   141→  1640→  1640→    const variance = resEV - resAC;
+   142→   142→  1641→  1641→    const status = variance >= 0 ? 'good' : (variance >= -resPV * 0.1 ? 'warn' : 'bad');
+   143→   143→  1642→  1642→
+   144→   144→  1643→  1643→    perResource.push({
+   145→   145→  1644→  1644→      id: row.id,
+   146→   146→  1645→  1645→      desc: row.desc || '(unnamed role)',
+   147→   147→  1646→  1646→      planHoursToDate, actualHoursToDate,
+   148→   148→  1647→  1647→      plannedCost: resPV, actualCost: resAC, earnedValue: resEV,
+   149→   149→  1648→  1648→      variance, status
+   150→   150→  1649→  1649→    });
+   151→   151→  1650→  1650→
+   152→   152→  1651→  1651→    // Update tracking page live cells
+   153→   153→  1652→  1652→    const planEl   = document.getElementById('track-plan-'+row.id);
+   154→   154→  1653→  1653→    const totalEl   = document.getElementById('track-total-'+row.id);
+   155→   155→  1654→  1654→    const todateEl  = document.getElementById('track-todate-'+row.id);
+   156→   156→  1655→  1655→    const statusEl  = document.getElementById('track-status-'+row.id);
+   157→   157→  1656→  1656→    if (planEl)  planEl.textContent = plannedHoursPerMonth + ' hrs';
+   158→   158→  1657→  1657→    if (totalEl) totalEl.textContent = Math.round(actualHoursToDate) + ' hrs';
+   159→   159→  1658→  1658→    if (todateEl) todateEl.textContent = Math.round(planHoursToDate) + ' hrs';
+   160→   160→  1659→  1659→    if (statusEl) {
+   161→   161→  1660→  1660→      const diff = actualHoursToDate - planHoursToDate;
+   162→   162→  1661→  1661→      const pct = planHoursToDate > 0 ? Math.round(diff/planHoursToDate*100) : 0;
+   163→   163→  1662→  1662→      statusEl.innerHTML = diff === 0 ? '<span style="color:var(--ink3)">On plan</span>'
+   164→   164→  1663→  1663→        : diff > 0 ? `<span style="color:var(--red)">+${pct}%</span>`
+   165→   165→  1664→  1664→        : `<span style="color:var(--green)">${pct}%</span>`;
+   166→   166→  1665→  1665→    }
+   167→   167→  1666→  1666→  });
+   168→   168→  1667→  1667→
+   169→   169→  1668→  1668→  const CV  = EV - AC;
+   170→   170→  1669→  1669→  const SV  = EV - PV;
+   171→   171→  1670→  1670→  const CPI = AC > 0 ? EV / AC : 1;
+   172→   172→  1671→  1671→  const SPI = PV > 0 ? EV / PV : 1;
+   173→   173→  1672→  1672→  const EAC = CPI > 0 ? AC + (BAC - EV) / CPI : BAC;
+   174→   174→  1673→  1673→  const ETC = EAC - AC; // estimate to complete
+   175→   175→  1674→  1674→  const VAC = BAC - EAC; // variance at completion
+   176→   176→  1675→  1675→
+   177→   177→  1676→  1676→  // Non-labour costs (assumed to track on-plan since we don't track hours for them)
+   178→   178→  1677→  1677→  const nonLabourTotal = CATS.filter(cat => cat !== 'labour').reduce((s, cat) => s + d.catTotals[cat].total, 0);
+   179→   179→  1678→  1678→  const projectedTotalCost = EAC + nonLabourTotal;
+   180→   180→  1679→  1679→  const originalTotalCost  = BAC + nonLabourTotal;
+   181→   181→  1680→  1680→
+   182→   182→  1681→  1681→  return {
+   183→   183→  1682→  1682→    currentMonth, duration, stdHours,
+   184→   184→  1683→  1683→    PV, EV, AC, BAC, EAC, ETC, VAC, CV, SV, CPI, SPI,
+   185→   185→  1684→  1684→    perResource, nonLabourTotal, projectedTotalCost, originalTotalCost
+   186→   186→  1685→  1685→  };
+   187→   187→  1686→  1686→}
+   188→   188→  1687→  1687→
+   189→   189→  1688→  1688→function renderEVMPage(d, c) {
+   190→   190→  1689→  1689→  const evm = computeEVM(d);
+   191→   191→  1690→  1690→
+   192→   192→  1691→  1691→  setText('evm-pv', fmtFull(c, evm.PV));
+   193→   193→  1692→  1692→  setText('evm-ev', fmtFull(c, evm.EV));
+   194→   194→  1693→  1693→  setText('evm-ac', fmtFull(c, evm.AC));
+   195→   195→  1694→  1694→  setText('evm-eac', fmt(c, evm.projectedTotalCost));
+   196→   196→  1695→  1695→  setText('evm-eac-sub', 'vs. original plan: ' + fmtFull(c, evm.originalTotalCost));
+   197→   197→  1696→  1696→
+   198→   198→  1697→  1697→  setText('evm-cv', (evm.CV>=0?'+':'') + fmtFull(c, evm.CV));
+   199→   199→  1698→  1698→  setText('evm-sv', (evm.SV>=0?'+':'') + fmtFull(c, evm.SV));
+   200→   200→  1699→  1699→  setText('evm-cpi', evm.CPI.toFixed(2));
+   201→   201→  1700→  1700→  setText('evm-spi', evm.SPI.toFixed(2));
+   202→   202→  1701→  1701→  setText('evm-cv-sub', evm.CV >= 0 ? 'Under budget' : 'Over budget');
+   203→   203→  1702→  1702→  setText('evm-sv-sub', evm.SV >= 0 ? 'Ahead of schedule' : 'Behind schedule');
+   204→   204→  1703→  1703→  setText('evm-cpi-sub', evm.CPI >= 1 ? 'Efficient spending' : 'Inefficient spending');
+   205→   205→  1704→  1704→  setText('evm-spi-sub', evm.SPI >= 1 ? 'Ahead of plan' : 'Falling behind');
+   206→   206→  1705→  1705→
+   207→   207→  1706→  1706→  setMetricCard('mc-cv',  evm.CV  >= 0 ? 'green' : 'red');
+   208→   208→  1707→  1707→  setMetricCard('mc-sv',  evm.SV  >= 0 ? 'green' : 'red');
+   209→   209→  1708→  1708→  setMetricCard('mc-cpi', evm.CPI >= 1 ? 'green' : evm.CPI >= 0.9 ? 'amber' : 'red');
+   210→   210→  1709→  1709→  setMetricCard('mc-spi', evm.SPI >= 1 ? 'green' : evm.SPI >= 0.9 ? 'amber' : 'red');
+   211→   211→  1710→  1710→  setMetricCard('mc-pv', 'blue');
+   212→   212→  1711→  1711→  setMetricCard('mc-ev', 'teal');
+   213→   213→  1712→  1712→  setMetricCard('mc-ac', evm.AC <= evm.PV ? 'green' : 'amber');
+   214→   214→  1713→  1713→  setMetricCard('mc-eac', evm.projectedTotalCost <= evm.originalTotalCost ? 'green' : 'red');
+   215→   215→  1714→  1714→
+   216→   216→  1715→  1715→  const statusEl = document.getElementById('evm-status-box');
+   217→   217→  1716→  1716→  if (statusEl) {
+   218→   218→  1717→  1717→    const budgetOk = evm.CPI >= 1;
+   219→   219→  1718→  1718→    const scheduleOk = evm.SPI >= 1;
+   220→   220→  1719→  1719→    let cls, icon, title, desc;
+   221→   221→  1720→  1720→    if (budgetOk && scheduleOk) {
+   222→   222→  1721→  1721→      cls='go'; icon='✅'; title='On track — under budget and ahead of schedule';
+   223→   223→  1722→  1722→      desc = `At month ${evm.currentMonth} of ${evm.duration}, the project is performing well. CPI of ${evm.CPI.toFixed(2)} means every ${c}1 spent is delivering ${c}${evm.CPI.toFixed(2)} of planned value. Forecast final cost: ${fmtFull(c,evm.projectedTotalCost)} vs. original budget of ${fmtFull(c,evm.originalTotalCost)}.`;
+   224→   224→  1723→  1723→    } else if (!budgetOk && !scheduleOk) {
+   225→   225→  1724→  1724→      cls='nogo'; icon='❌'; title='Critical — over budget and behind schedule';
+   226→   226→  1725→  1725→      desc = `At month ${evm.currentMonth} of ${evm.duration}, the project is both overspending and falling behind. At this rate, forecast final cost is ${fmtFull(c,evm.projectedTotalCost)} — ${fmtFull(c,Math.abs(evm.VAC))} ${evm.VAC<0?'over':'under'} the original ${fmtFull(c,evm.originalTotalCost)} budget. Immediate corrective action recommended.`;
+   227→   227→  1726→  1726→    } else if (!budgetOk) {
+   228→   228→  1727→  1727→      cls='caution'; icon='⚠️'; title='Over budget — but on or ahead of schedule';
+   229→   229→  1728→  1728→      desc = `Work is progressing on schedule (SPI ${evm.SPI.toFixed(2)}) but costing more than planned (CPI ${evm.CPI.toFixed(2)}). Forecast final cost: ${fmtFull(c,evm.projectedTotalCost)}, which is ${fmtFull(c,Math.abs(evm.VAC))} over the original budget.`;
+   230→   230→  1729→  1729→    } else {
+   231→   231→  1730→  1730→      cls='caution'; icon='⚠️'; title='Behind schedule — but within budget';
+   232→   232→  1731→  1731→      desc = `Spending is under control (CPI ${evm.CPI.toFixed(2)}) but progress is slower than planned (SPI ${evm.SPI.toFixed(2)}). Consider whether resourcing needs to increase to hit the ${evm.duration}-month target.`;
+   233→   233→  1732→  1732→    }
+   234→   234→  1733→  1733→    statusEl.innerHTML = `<div class="verdict-box ${cls}">
+   235→   235→  1734→  1734→      <div class="vb-head"><div class="vb-icon">${icon}</div><div class="vb-title">${title}</div></div>
+   236→   236→  1735→  1735→      <div class="vb-desc">${desc}</div>
+   237→   237→  1736→  1736→    </div>`;
+   238→   238→  1737→  1737→  }
+   239→   239→  1738→  1738→
+   240→   240→  1739→  1739→  renderEVMQuadrant(evm, c);
+   241→   241→  1740→  1740→  renderEVMTrend(d, evm, c);
+   242→   242→  1741→  1741→
+   243→   243→  1742→  1742→  const tbody = document.getElementById('evm-resource-tbody');
+   244→   244→  1743→  1743→  if (tbody) {
+   245→   245→  1744→  1744→    if (evm.perResource.length === 0) {
+   246→   246→  1745→  1745→      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--ink3);padding:20px">No labour resources yet — add team members in Cost Inputs</td></tr>`;
+   247→   247→  1746→  1746→    } else {
+   248→   248→  1747→  1747→      tbody.innerHTML = evm.perResource.map(r => {
+   249→   249→  1748→  1748→        const statusLabel = r.status === 'good' ? 'On/under budget' : r.status === 'warn' ? 'Slightly over' : 'Significantly over';
+   250→   250→  1749→  1749→        const statusColor = r.status === 'good' ? 'go' : r.status === 'warn' ? 'caution' : 'nogo';
+   251→   251→  1750→  1750→        return `<tr>
+   252→   252→  1751→  1751→          <td style="font-weight:600">${esc(r.desc)}</td>
+   253→   253→  1752→  1752→          <td class="r">${Math.round(r.planHoursToDate)} hrs</td>
+   254→   254→  1753→  1753→          <td class="r">${Math.round(r.actualHoursToDate)} hrs</td>
+   255→   255→  1754→  1754→          <td class="r">${fmtFull(c, r.plannedCost)}</td>
+   256→   256→  1755→  1755→          <td class="r">${fmtFull(c, r.actualCost)}</td>
+   257→   257→  1756→  1756→          <td class="r" style="color:${r.variance>=0?'var(--green)':'var(--red)'};font-weight:700">${r.variance>=0?'+':''}${fmtFull(c, r.variance)}</td>
+   258→   258→  1757→  1757→          <td><span class="verdict-pill vp-${statusColor}">${statusLabel}</span></td>
+   259→   259→  1758→  1758→        </tr>`;
+   260→   260→  1759→  1759→      }).join('');
+   261→   261→  1760→  1760→    }
+   262→   262→  1761→  1761→  }
+   263→   263→  1762→  1762→
+   264→   264→  1763→  1763→  renderEVMRecommendations(evm, d, c);
+   265→   265→  1764→  1764→  return evm;
+   266→   266→  1765→  1765→}
+   267→   267→  1766→  1766→
+   268→   268→  1767→  1767→function renderEVMQuadrant(evm, c) {
+   269→   269→  1768→  1768→  const el = document.getElementById('evm-quadrant');
+   270→   270→  1769→  1769→  if (!el) return;
+   271→   271→  1770→  1770→
+   272→   272→  1771→  1771→  const cvPct = evm.PV > 0 ? Math.max(-50, Math.min(50, (evm.CV / evm.PV) * 100)) : 0;
+   273→   273→  1772→  1772→  const svPct = evm.PV > 0 ? Math.max(-50, Math.min(50, (evm.SV / evm.PV) * 100)) : 0;
+   274→   274→  1773→  1773→
+   275→   275→  1774→  1774→  const size = 320;
+   276→   276→  1775→  1775→  const cx = size/2, cy = size/2;
+   277→   277→  1776→  1776→  const px = cx + (cvPct/50) * (size/2 - 30);
+   278→   278→  1777→  1777→  const py = cy - (svPct/50) * (size/2 - 30);
+   279→   279→  1778→  1778→
+   280→   280→  1779→  1779→  const dotColor = (cvPct>=0 && svPct>=0) ? '#16a34a' : (cvPct<0 && svPct<0) ? '#dc2626' : '#d97706';
+   281→   281→  1780→  1780→
+   282→   282→  1781→  1781→  el.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+   283→   283→  1782→  1782→    <rect x="0" y="0" width="${size/2}" height="${size/2}" fill="#fef3c7" opacity="0.4"/>
+   284→   284→  1783→  1783→    <rect x="${size/2}" y="0" width="${size/2}" height="${size/2}" fill="#dcfce7" opacity="0.4"/>
+   285→   285→  1784→  1784→    <rect x="0" y="${size/2}" width="${size/2}" height="${size/2}" fill="#fee2e2" opacity="0.4"/>
+   286→   286→  1785→  1785→    <rect x="${size/2}" y="${size/2}" width="${size/2}" height="${size/2}" fill="#fef3c7" opacity="0.4"/>
+   287→   287→  1786→  1786→    <line x1="0" y1="${cy}" x2="${size}" y2="${cy}" stroke="#c5d0da" stroke-width="1.5"/>
+   288→   288→  1787→  1787→    <line x1="${cx}" y1="0" x2="${cx}" y2="${size}" stroke="#c5d0da" stroke-width="1.5"/>
+   289→   289→  1788→  1788→    <text x="${size-6}" y="${cy-8}" font-size="10" fill="#7a8fa0" text-anchor="end">Under budget →</text>
+   290→   290→  1789→  1789→    <text x="6" y="${cy-8}" font-size="10" fill="#7a8fa0" text-anchor="start">← Over budget</text>
+   291→   291→  1790→  1790→    <text x="${cx+6}" y="14" font-size="10" fill="#7a8fa0">Ahead of schedule ↑</text>
+   292→   292→  1791→  1791→    <text x="${cx+6}" y="${size-8}" font-size="10" fill="#7a8fa0">↓ Behind schedule</text>
+   293→   293→  1792→  1792→    <circle cx="${px}" cy="${py}" r="10" fill="${dotColor}" opacity="0.25"/>
+   294→   294→  1793→  1793→    <circle cx="${px}" cy="${py}" r="6" fill="${dotColor}" stroke="#fff" stroke-width="2"/>
+   295→   295→  1794→  1794→    <text x="${px}" y="${py-16}" font-size="11" font-weight="700" fill="${dotColor}" text-anchor="middle">You are here</text>
+   296→   296→  1795→  1795→  </svg>`;
+   297→   297→  1796→  1796→}
+   298→   298→  1797→  1797→
+   299→   299→  1798→  1798→function renderEVMTrend(d, evm, c) {
+   300→   300→  1799→  1799→  const el = document.getElementById('evm-trend-chart');
+   301→   301→  1800→  1800→  if (!el) return;
+   302→   302→  1801→  1801→
+   303→   303→  1802→  1802→  const duration = evm.duration;
+   304→   304→  1803→  1803→  const stdHours = evm.stdHours;
+   305→   305→  1804→  1804→
+   306→   306→  1805→  1805→  let cumPlanned = 0, cumActual = 0;
+   307→   307→  1806→  1806→  const points = [];
+   308→   308→  1807→  1807→  for (let m = 1; m <= duration; m++) {
+   309→   309→  1808→  1808→    let monthPlan = 0, monthActual = 0;
+   310→   310→  1809→  1809→    rows.labour.forEach(row => {
+   311→   311→  1810→  1810→      const qty = parseFloat(row.qty) || 1;
+   312→   312→  1811→  1811→      const monthlyCost = getRowMonthlyCost(row);
+   313→   313→  1812→  1812→      const plannedHrs = row.rateBasis === 'hourly' ? (parseFloat(row.plannedHours)||0) : stdHours;
+   314→   314→  1813→  1813→      const impliedRate = plannedHrs > 0 ? monthlyCost / plannedHrs : 0;
+   315→   315→  1814→  1814→      monthPlan += monthlyCost * qty;
+   316→   316→  1815→  1815→      if (m <= evm.currentMonth) {
+   317→   317→  1816→  1816→        const actualHrs = actualHours[row.id] && actualHours[row.id][m] !== undefined
+   318→   318→  1817→  1817→          ? actualHours[row.id][m] : plannedHrs;
+   319→   319→  1818→  1818→        monthActual += impliedRate * actualHrs * qty;
+   320→   320→  1819→  1819→      }
+   321→   321→  1820→  1820→    });
+   322→   322→  1821→  1821→    cumPlanned += monthPlan;
+   323→   323→  1822→  1822→    if (m <= evm.currentMonth) cumActual += monthActual;
+   324→   324→  1823→  1823→    points.push({ m, planned: cumPlanned, actual: m <= evm.currentMonth ? cumActual : null });
+   325→   325→  1824→  1824→  }
+   326→   326→  1825→  1825→
+   327→   327→  1826→  1826→  const maxVal = Math.max(...points.map(p => p.planned), cumActual, 1);
+   328→   328→  1827→  1827→  const w = 680, h = 220, padL = 50, padB = 24, padT = 10, padR = 10;
+   329→   329→  1828→  1828→  const plotW = w - padL - padR, plotH = h - padT - padB;
+   330→   330→  1829→  1829→
+   331→   331→  1830→  1830→  const xFor = m => padL + (m-1)/(duration-1||1) * plotW;
+   332→   332→  1831→  1831→  const yFor = v => padT + plotH - (v/maxVal) * plotH;
+   333→   333→  1832→  1832→
+   334→   334→  1833→  1833→  const plannedPath = points.map((p,i) => `${i===0?'M':'L'} ${xFor(p.m)} ${yFor(p.planned)}`).join(' ');
+   335→   335→  1834→  1834→  const actualPoints = points.filter(p => p.actual !== null);
+   336→   336→  1835→  1835→  const actualPath = actualPoints.map((p,i) => `${i===0?'M':'L'} ${xFor(p.m)} ${yFor(p.actual)}`).join(' ');
+   337→   337→  1836→  1836→
+   338→   338→  1837→  1837→  const currentX = xFor(evm.currentMonth);
+   339→   339→  1838→  1838→
+   340→   340→  1839→  1839→  el.innerHTML = `<svg width="100%" viewBox="0 0 ${w} ${h}" style="overflow:visible">
+   341→   341→  1840→  1840→    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h-padB}" stroke="#dde4eb"/>
+   342→   342→  1841→  1841→    <line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="#dde4eb"/>
+   343→   343→  1842→  1842→    <text x="${padL-6}" y="${padT+4}" font-size="10" fill="#7a8fa0" text-anchor="end">${fmt(c,maxVal)}</text>
+   344→   344→  1843→  1843→    <text x="${padL-6}" y="${h-padB}" font-size="10" fill="#7a8fa0" text-anchor="end">0</text>
+   345→   345→  1844→  1844→    <line x1="${currentX}" y1="${padT}" x2="${currentX}" y2="${h-padB}" stroke="#1a6cf0" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+   346→   346→  1845→  1845→    <text x="${currentX}" y="${padT-2}" font-size="10" fill="#1a6cf0" text-anchor="middle">Now (M${evm.currentMonth})</text>
+   347→   347→  1846→  1846→    <path d="${plannedPath}" fill="none" stroke="#7a8fa0" stroke-width="2" stroke-dasharray="5,4"/>
+   348→   348→  1847→  1847→    <path d="${actualPath}" fill="none" stroke="#1a6cf0" stroke-width="2.5"/>
+   349→   349→  1848→  1848→    ${actualPoints.length ? `<circle cx="${xFor(actualPoints[actualPoints.length-1].m)}" cy="${yFor(actualPoints[actualPoints.length-1].actual)}" r="4" fill="#1a6cf0"/>` : ''}
+   350→   350→  1849→  1849→    <text x="${w-padR}" y="${padT+12}" font-size="10" fill="#7a8fa0" text-anchor="end">M${duration}</text>
+   351→   351→  1850→  1850→    <text x="${padL}" y="${h-4}" font-size="10" fill="#7a8fa0">M1</text>
+   352→   352→  1851→  1851→  </svg>
+   353→   353→  1852→  1852→  <div style="display:flex;gap:18px;font-size:12px;margin-top:6px">
+   354→   354→  1853→  1853→    <span style="color:#7a8fa0">– – Planned cumulative cost</span>
+   355→   355→  1854→  1854→    <span style="color:#1a6cf0">— Actual cumulative cost (to date)</span>
+   356→   356→  1855→  1855→  </div>`;
+   357→   357→  1856→  1856→}
+   358→   358→  1857→  1857→
+   359→   359→  1858→  1858→function renderEVMRecommendations(evm, d, c) {
+   360→   360→  1859→  1859→  const el = document.getElementById('evm-recommendations');
+   361→   361→  1860→  1860→  if (!el) return;
+   362→   362→  1861→  1861→
+   363→   363→  1862→  1862→  const recs = [];
+   364→   364→  1863→  1863→
+   365→   365→  1864→  1864→  if (evm.CPI < 0.85) {
+   366→   366→  1865→  1865→    recs.push({ severity: 'high', icon: '🔴', title: 'Significant cost overrun detected',
+   367→   367→  1866→  1866→      text: `CPI of ${evm.CPI.toFixed(2)} means you're getting only ${c}${evm.CPI.toFixed(2)} of value per ${c}1 spent. Review the per-resource variance table below to identify which roles are most over budget, and consider renegotiating scope or rates for those resources.` });
+   368→   368→  1867→  1867→  } else if (evm.CPI < 1) {
+   369→   369→  1868→  1868→    recs.push({ severity: 'med', icon: '🟡', title: 'Mild cost overrun — monitor closely',
+   370→   370→  1869→  1869→      text: `CPI of ${evm.CPI.toFixed(2)} is slightly under 1.0. This is recoverable but worth flagging to the team — small overruns compound over a long project.` });
+   371→   371→  1870→  1870→  } else if (evm.CPI >= 1.1) {
+   372→   372→  1871→  1871→    recs.push({ severity: 'good', icon: '🟢', title: 'Cost efficiency is strong',
+   373→   373→  1872→  1872→      text: `CPI of ${evm.CPI.toFixed(2)} suggests resources may be under-utilised relative to budget, or work is genuinely more efficient than planned. Consider whether budget could be reallocated to accelerate other workstreams.` });
+   374→   374→  1873→  1873→  }
+   375→   375→  1874→  1874→
+   376→   376→  1875→  1875→  if (evm.SPI < 0.85) {
+   377→   377→  1876→  1876→    recs.push({ severity: 'high', icon: '🔴', title: 'Project is falling significantly behind schedule',
+   378→   378→  1877→  1877→      text: `SPI of ${evm.SPI.toFixed(2)} means progress is well behind plan. Consider adding short-term contractor capacity to the most delayed roles, descoping non-critical features, or extending the deadline rather than compressing future months further.` });
+   379→   379→  1878→  1878→  } else if (evm.SPI < 1) {
+   380→   380→  1879→  1879→    recs.push({ severity: 'med', icon: '🟡', title: 'Schedule slipping slightly',
+   381→   381→  1880→  1880→      text: `SPI of ${evm.SPI.toFixed(2)} indicates a minor schedule slip. A focused sprint or temporary reallocation of hours from lower-priority categories could close this gap before it compounds.` });
+   382→   382→  1881→  1881→  }
+   383→   383→  1882→  1882→
+   384→   384→  1883→  1883→  if (evm.VAC < 0) {
+   385→   385→  1884→  1884→    const overrunPct = evm.originalTotalCost > 0 ? Math.abs(evm.VAC / evm.originalTotalCost * 100) : 0;
+   386→   386→  1885→  1885→    recs.push({ severity: overrunPct > 15 ? 'high' : 'med', icon: overrunPct > 15 ? '🔴' : '🟡',
+   387→   387→  1886→  1886→      title: `Forecast final cost is ${fmtFull(c, Math.abs(evm.VAC))} over original budget (${overrunPct.toFixed(0)}%)`,
+   388→   388→  1887→  1887→      text: `At the current burn rate and efficiency, total project cost is trending to ${fmtFull(c, evm.projectedTotalCost)} against an original budget of ${fmtFull(c, evm.originalTotalCost)}. ${overrunPct > 15 ? 'This exceeds typical contingency buffers — escalate to stakeholders now.' : 'This is within a typical 10-15% contingency buffer, but should be tracked weekly.'}` });
+   389→   389→  1888→  1888→  }
+   390→   390→  1889→  1889→
+   391→   391→  1890→  1890→  if (evm.perResource.length > 0) {
+   392→   392→  1891→  1891→    const worst = evm.perResource.reduce((a,b) => a.variance < b.variance ? a : b);
+   393→   393→  1892→  1892→    if (worst.variance < -100) {
+   394→   394→  1893→  1893→      recs.push({ severity: 'med', icon: '👤', title: `"${worst.desc}" is the largest driver of cost variance`,
+   395→   395→  1894→  1894→        text: `This resource has a variance of ${fmtFull(c, worst.variance)} (actual cost ${fmtFull(c, worst.actualCost)} vs. planned ${fmtFull(c, worst.plannedCost)}). Check whether this reflects scope creep, underestimated complexity, or a rate mismatch when this resource was budgeted.` });
+   396→   396→  1895→  1895→    }
+   397→   397→  1896→  1896→  }
+   398→   398→  1897→  1897→
+   399→   399→  1898→  1898→  if (d.totalProject > 0) {
+   400→   400→  1899→  1899→    const llmShare = d.catTotals.llm.total / d.totalProject;
+   401→   401→  1900→  1900→    if (llmShare > 0.15) {
+   402→   402→  1901→  1901→      recs.push({ severity: 'med', icon: '🤖', title: 'LLM / AI costs are a significant share of total spend',
+   403→   403→  1902→  1902→        text: `LLM costs represent ${Math.round(llmShare*100)}% of total project cost. Consider prompt optimisation, caching repeated queries, or a cheaper model tier for non-critical paths to reduce this without sacrificing the core feature.` });
+   404→   404→  1903→  1903→    }
+   405→   405→  1904→  1904→  }
+   406→   406→  1905→  1905→
+   407→   407→  1906→  1906→  if (recs.length === 0) {
+   408→   408→  1907→  1907→    recs.push({ severity: 'good', icon: '✅', title: 'No corrective action needed',
+   409→   409→  1908→  1908→      text: 'Cost and schedule performance are both on track. Continue current resourcing and re-check this page after logging next month\'s actual hours.' });
+   410→   410→  1909→  1909→  }
+   411→   411→  1910→  1910→
+   412→   412→  1911→  1911→  const sevBg    = { high: 'var(--red-lt)', med: 'var(--amber-lt)', good: 'var(--green-lt)' };
+   413→   413→  1912→  1912→  const sevText  = { high: 'var(--red)', med: '#92400e', good: 'var(--green)' };
+   414→   414→  1913→  1913→
+   415→   415→  1914→  1914→  el.innerHTML = recs.map(r => `<div style="display:flex;gap:12px;padding:14px;border-radius:var(--r8);background:${sevBg[r.severity]};margin-bottom:10px">
+   416→   416→  1915→  1915→    <div style="font-size:20px;flex-shrink:0">${r.icon}</div>
+   417→   417→  1916→  1916→    <div>
+   418→   418→  1917→  1917→      <div style="font-weight:700;font-size:13px;color:${sevText[r.severity]};margin-bottom:4px">${r.title}</div>
+   419→   419→  1918→  1918→      <div style="font-size:12px;color:var(--ink2);line-height:1.6">${r.text}</div>
+   420→   420→  1919→  1919→    </div>
+   421→   421→  1920→  1920→  </div>`).join('');
+   422→   422→  1921→  1921→}
+   423→   423→  1922→  1922→
+   424→   424→  1923→  1923→function computeCatTotals(duration) {
+   425→   425→  1924→  1924→  const totals = {};
+   426→   426→  1925→  1925→  CATS.forEach(cat => {
+   427→   427→  1926→  1926→    totals[cat] = { monthly: 0, onetime: 0, perunit: 0, total: 0 };
+   428→   428→  1927→  1927→    rows[cat].forEach(row => {
+   429→   429→  1928→  1928→      const rate = parseFloat(row.rate) || 0;
+   430→   430→  1929→  1929→      const qty  = parseFloat(row.qty)  || 1;
+   431→   431→  1930→  1930→      if (row.type === 'monthly') {
+   432→   432→  1931→  1931→        const monthlyCost = getRowMonthlyCost(row);
+   433→   433→  1932→  1932→        totals[cat].monthly += monthlyCost * qty;
+   434→   434→  1933→  1933→        totals[cat].total   += monthlyCost * qty * duration;
+   435→   435→  1934→  1934→      } else if (row.type === 'onetime') {
+   436→   436→  1935→  1935→        totals[cat].onetime += rate * qty;
+   437→   437→  1936→  1936→        totals[cat].total   += rate * qty;
+   438→   438→  1937→  1937→      } else if (row.type === 'perunit') {
+   439→   439→  1938→  1938→        totals[cat].perunit += rate * qty;
+   440→   440→  1939→  1939→      }
+   441→   441→  1940→  1940→    });
+   442→   442→  1941→  1941→  });
+   443→   443→  1942→  1942→  return totals;
+   444→   444→  1943→  1943→}
+   445→   445→  1944→  1944→
+   446→   446→  1945→  1945→function computeAll() {
+   447→   447→  1946→  1946→  const duration   = getNum('f-duration', 12);
+   448→   448→  1947→  1947→  const targetVol  = getNum('f-targetVol', 500);
+   449→   449→  1948→  1948→  const salesPeriod= getNum('f-salesPeriod', 12);
+   450→   450→  1949→  1949→  const currency   = getStr('f-currency', '$');
+   451→   451→  1950→  1950→  const unitLabel  = getStr('f-unitLabel', 'Units');
+   452→   452→  1951→  1951→
+   453→   453→  1952→  1952→  const catTotals  = computeCatTotals(duration);
+   454→   454→  1953→  1953→
+   455→   455→  1954→  1954→  let totalMonthly = 0, totalOnetime = 0, totalPerunit = 0, totalProject = 0;
+   456→   456→  1955→  1955→  CATS.forEach(cat => {
+   457→   457→  1956→  1956→    totalMonthly  += catTotals[cat].monthly;
+   458→   458→  1957→  1957→    totalOnetime  += catTotals[cat].onetime;
+   459→   459→  1958→  1958→    totalPerunit  += catTotals[cat].perunit;
+   460→   460→  1959→  1959→    totalProject  += catTotals[cat].total;
+   461→   461→  1960→  1960→  });
+   462→   462→  1961→  1961→
+   463→   463→  1962→  1962→  // Pricing
+   464→   464→  1963→  1963→  const margin       = getNum('f-margin', 35) / 100;
+   465→   465→  1964→  1964→  const churn        = getNum('f-churn', 3) / 100;
+   466→   466→  1965→  1965→  const growth       = getNum('f-growth', 10) / 100;
+   467→   467→  1966→  1966→  const costBuffer   = getNum('f-costBuffer', 15) / 100;
+   468→   468→  1967→  1967→  const minROI       = getNum('f-minROI', 15);
+   469→   469→  1968→  1968→  const maxPayback   = getNum('f-maxPayback', 36);
+   470→   470→  1969→  1969→  const minMarginPct = getNum('f-minMargin', 20);
+   471→   471→  1970→  1970→
+   472→   472→  1971→  1971→  const cpuFixed     = targetVol > 0 ? totalProject / targetVol : 0;
+   473→   473→  1972→  1972→  const costPerUnit  = cpuFixed + totalPerunit;
+   474→   474→  1973→  1973→
+   475→   475→  1974→  1974→  const manualPrice  = getNum('f-sellingPrice', 0);
+   476→   476→  1975→  1975→  const derivedPrice = margin < 1 && costPerUnit > 0 ? costPerUnit / (1 - margin) : costPerUnit * 1.5;
+   477→   477→  1976→  1976→  const sellingPrice = (manualPrice > 0) ? manualPrice : derivedPrice;
+   478→   478→  1977→  1977→
+   479→   479→  1978→  1978→  const grossMarginPct = sellingPrice > 0 ? (sellingPrice - costPerUnit) / sellingPrice * 100 : 0;
+   480→   480→  1979→  1979→
+   481→   481→  1980→  1980→  // Break-even
+   482→   482→  1981→  1981→  const contribPerUnit  = sellingPrice - totalPerunit;
+   483→   483→  1982→  1982→  const beUnits         = contribPerUnit > 0 ? Math.ceil(totalProject / contribPerUnit) : Infinity;
+   484→   484→  1983→  1983→  const beRevenue       = beUnits < Infinity ? beUnits * sellingPrice : Infinity;
+   485→   485→  1984→  1984→
+   486→   486→  1985→  1985→  // Revenue & profit at target
+   487→   487→  1986→  1986→  const targetRevenue   = sellingPrice * targetVol;
+   488→   488→  1987→  1987→  const netProfit       = targetRevenue - totalProject - totalPerunit * targetVol;
+   489→   489→  1988→  1988→
+   490→   490→  1989→  1989→  // Monthly net profit (post-launch)
+   491→   491→  1990→  1990→  const monthlyRevenue  = sellingPrice * targetVol / Math.max(salesPeriod, 1);
+   492→   492→  1991→  1991→  const monthlyNet      = monthlyRevenue - totalMonthly;
+   493→   493→  1992→  1992→  const paybackMonths   = (monthlyNet > 0 && totalOnetime > 0)
+   494→   494→  1993→  1993→    ? Math.ceil(totalOnetime / monthlyNet)
+   495→   495→  1994→  1994→    : (monthlyNet <= 0 ? Infinity : 0);
+   496→   496→  1995→  1995→
+   497→   497→  1996→  1996→  const roi = totalProject > 0 ? (netProfit / totalProject) * 100 : 0;
+   498→   498→  1997→  1997→
+   499→   499→  1998→  1998→  // Churn impact
+   500→   500→  1999→  1999→  const churnedUnits = Math.round(targetVol * churn * 12);
+
+[showing lines 1-500 of 502; use offset=501 with limit to continue reading]
